@@ -48,15 +48,17 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
   const trend = forecast.length > 0 && forecast[forecast.length - 1].aqi > city.aqi ? "up" : "down";
 
   return (
-    <div className="glass-panel p-4 w-full max-h-[calc(100vh-6rem)] overflow-y-auto">
+    <div className="glass-panel p-6 w-full">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-          <Zap className="w-3.5 h-3.5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-display font-semibold text-sm text-foreground">72-Hour Forecast</h3>
-          <p className="text-xs text-muted-foreground">Powered by AI</p>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+            <Zap className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-display font-semibold text-foreground">72-Hour AI Forecast</h3>
+            <p className="text-xs text-muted-foreground">Powered by Gemini AI</p>
+          </div>
         </div>
         
         {/* AI Confidence Badge */}
@@ -64,44 +66,47 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="px-2 py-1 rounded-full bg-primary/20 border border-primary/30"
+            className="px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30"
           >
-            <span className="text-xs font-semibold text-primary">{avgConfidence}%</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-xs font-semibold text-primary">AI Confidence: {avgConfidence}%</span>
+            </div>
           </motion.div>
         )}
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 text-primary animate-spin mb-2" />
-          <p className="text-xs text-muted-foreground">Generating...</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
+          <p className="text-sm text-muted-foreground">Generating AI forecast...</p>
         </div>
       ) : forecast.length > 0 ? (
         <>
           {/* Summary Stats */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="p-2 rounded-lg bg-secondary/30 text-center">
-              <p className="text-xs text-muted-foreground mb-0.5">Current</p>
-              <p className="text-base font-bold" style={{ color: getAqiColor(city.aqi) }}>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="p-3 rounded-xl bg-secondary/30 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Current</p>
+              <p className="text-lg font-bold" style={{ color: getAqiColor(city.aqi) }}>
                 {city.aqi}
               </p>
             </div>
-            <div className="p-2 rounded-lg bg-secondary/30 text-center">
-              <p className="text-xs text-muted-foreground mb-0.5">Peak</p>
-              <p className="text-base font-bold" style={{ color: getAqiColor(maxAqi) }}>
+            <div className="p-3 rounded-xl bg-secondary/30 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Peak</p>
+              <p className="text-lg font-bold" style={{ color: getAqiColor(maxAqi) }}>
                 {maxAqi}
               </p>
             </div>
-            <div className="p-2 rounded-lg bg-secondary/30 text-center">
-              <p className="text-xs text-muted-foreground mb-0.5">Low</p>
-              <p className="text-base font-bold" style={{ color: getAqiColor(minAqi) }}>
+            <div className="p-3 rounded-xl bg-secondary/30 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Low</p>
+              <p className="text-lg font-bold" style={{ color: getAqiColor(minAqi) }}>
                 {minAqi}
               </p>
             </div>
           </div>
 
           {/* Chart */}
-          <div className="h-32 mb-3">
+          <div className="h-48 mb-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -112,15 +117,14 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
                 </defs>
                 <XAxis
                   dataKey="hour"
-                  tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 9 }}
+                  tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 9 }}
+                  tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
-                  width={30}
                 />
                 <Tooltip
                   contentStyle={{
@@ -128,7 +132,7 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
                     border: "1px solid hsl(222, 30%, 16%)",
                     borderRadius: "8px",
                     color: "hsl(210, 40%, 92%)",
-                    fontSize: 11,
+                    fontSize: 12,
                   }}
                   formatter={(value: number, name: string) => {
                     if (name === "aqi") return [value, "AQI"];
@@ -148,7 +152,7 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
           </div>
 
           {/* Trend Arrow Animation */}
-          <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-secondary/20">
+          <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-secondary/20">
             <motion.div
               animate={{
                 y: trend === "up" ? [-2, 2, -2] : [2, -2, 2],
@@ -160,19 +164,19 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
               }}
             >
               <TrendingUp
-                className={`w-4 h-4 ${
+                className={`w-5 h-5 ${
                   trend === "up" ? "text-destructive rotate-0" : "text-primary rotate-180"
                 }`}
               />
             </motion.div>
-            <p className="text-xs text-muted-foreground">
-              {trend === "up" ? "Rising" : "Improving"} trend
+            <p className="text-sm text-muted-foreground">
+              {trend === "up" ? "AQI expected to rise" : "AQI expected to improve"} over next 72 hours
             </p>
           </div>
         </>
       ) : (
-        <div className="text-center py-6">
-          <p className="text-xs text-muted-foreground">No forecast data</p>
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground">No forecast data available</p>
         </div>
       )}
     </div>

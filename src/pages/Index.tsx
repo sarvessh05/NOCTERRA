@@ -225,11 +225,11 @@ export default function Index() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ 
                     opacity: 1, 
-                    x: showAIInsight ? -320 : 0 // Slide left when AI Insights opens
+                    x: showAIInsight ? -420 : 0 // Slide left when AI Insights opens
                   }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                  className="pointer-events-auto w-80"
+                  className="pointer-events-auto w-[400px]"
                 >
                   <AIForecastPanel city={selectedCity} />
                 </motion.div>
@@ -239,11 +239,11 @@ export default function Index() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ 
                     opacity: 1, 
-                    x: showAIInsight ? -320 : 0 // Slide left when AI Insights opens
+                    x: showAIInsight ? -420 : 0 // Slide left when AI Insights opens
                   }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                  className="pointer-events-auto w-80"
+                  className="pointer-events-auto w-[400px]"
                 >
                   <PredictionPanel
                     city={selectedCity}
@@ -261,7 +261,7 @@ export default function Index() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 100 }}
                       transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                      className="pointer-events-auto w-80"
+                      className="pointer-events-auto w-[400px]"
                     >
                       <AIInsightPanel
                         city={selectedCity}

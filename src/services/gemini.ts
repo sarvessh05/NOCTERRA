@@ -13,17 +13,36 @@ export async function getAirQualityInsight(
   aqi: number,
   trend: 'up' | 'down' | 'stable'
 ): Promise<AirQualityInsight> {
-  const prompt = `You are an air quality expert. Analyze this data for ${cityName}:
+  const prompt = `You are an air quality expert analyzing ${cityName} specifically.
+
+Current Data:
+- City: ${cityName}
 - Current AQI: ${aqi}
 - Trend: ${trend}
 
-Provide a concise analysis in JSON format with these fields:
-1. explanation (2-3 sentences): Why is the AQI at this level? What factors contribute?
-2. healthAdvice (2-3 sentences): Practical outdoor activity recommendations
-3. trend (1 sentence): What to expect in the next 24-48 hours
-4. confidence (number 0-100): Your confidence in this analysis
+Provide a detailed, city-specific analysis in JSON format:
 
-Keep it conversational and helpful. Return ONLY valid JSON, no markdown.`;
+1. explanation: Why does ${cityName} have an AQI of ${aqi} right now? Consider:
+   - Local geography and climate
+   - Industrial activity in the region
+   - Traffic patterns
+   - Seasonal factors
+   - Recent weather conditions
+   Be specific to ${cityName}, not generic.
+
+2. healthAdvice: Practical recommendations for people in ${cityName} today:
+   - What outdoor activities are safe?
+   - Best times for exercise
+   - Precautions for sensitive groups
+   - Indoor air quality tips
+
+3. trend: What should ${cityName} residents expect in the next 24-48 hours?
+   - Will it improve or worsen?
+   - Why?
+
+4. confidence: Your confidence level (0-100) in this analysis
+
+Return ONLY valid JSON with these exact fields. Be conversational and specific to ${cityName}.`;
 
   try {
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -38,8 +57,8 @@ Keep it conversational and helpful. Return ONLY valid JSON, no markdown.`;
           }]
         }],
         generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 500,
+          temperature: 0.9,
+          maxOutputTokens: 800,
         }
       })
     });
@@ -61,19 +80,19 @@ Keep it conversational and helpful. Return ONLY valid JSON, no markdown.`;
     return insight;
   } catch (error) {
     console.error('Gemini API error:', error);
-    // Fallback response
+    // Fallback response - city-specific
     return {
-      explanation: `The current AQI of ${aqi} indicates ${aqi > 150 ? 'unhealthy' : aqi > 100 ? 'moderate' : 'good'} air quality. This is influenced by local emissions, weather patterns, and seasonal factors.`,
+      explanation: `${cityName} currently has an AQI of ${aqi}, which indicates ${aqi > 150 ? 'unhealthy' : aqi > 100 ? 'moderate' : 'good'} air quality. This is influenced by local emissions, weather patterns, and seasonal factors specific to the region.`,
       healthAdvice: aqi > 150 
-        ? 'Limit outdoor activities, especially for sensitive groups. Keep windows closed and use air purifiers indoors.'
+        ? `Residents of ${cityName} should limit outdoor activities, especially sensitive groups. Keep windows closed and use air purifiers indoors.`
         : aqi > 100
-        ? 'Sensitive individuals should reduce prolonged outdoor exertion. Morning hours are generally better for exercise.'
-        : 'Air quality is good. Enjoy outdoor activities without restrictions.',
+        ? `In ${cityName}, sensitive individuals should reduce prolonged outdoor exertion. Morning hours are generally better for exercise.`
+        : `Air quality in ${cityName} is good. Enjoy outdoor activities without restrictions.`,
       trend: trend === 'up' 
-        ? 'Air quality may worsen in the coming hours due to atmospheric conditions.'
+        ? `Air quality in ${cityName} may worsen in the coming hours due to atmospheric conditions.`
         : trend === 'down'
-        ? 'Conditions are expected to improve with better ventilation.'
-        : 'Air quality should remain relatively stable.',
+        ? `Conditions in ${cityName} are expected to improve with better ventilation.`
+        : `Air quality in ${cityName} should remain relatively stable.`,
       confidence: 75
     };
   }
