@@ -1,8 +1,8 @@
-# AERIS AI Features Documentation
+# NOCTERRA AI Features Documentation
 
 ## 🤖 Overview
 
-AERIS now includes three powerful AI-driven features that elevate the air quality visualization experience:
+NOCTERRA now includes three powerful AI-driven features that elevate the air quality visualization experience:
 
 1. **AI Insight Panel** - Personalized air quality explanations
 2. **72-Hour AI Forecast** - Advanced predictive analytics

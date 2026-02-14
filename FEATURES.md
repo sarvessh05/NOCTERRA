@@ -1,6 +1,6 @@
-# AERIS Features
+# NOCTERRA Features
 
-Complete feature list and capabilities of the AERIS platform.
+Complete feature list and capabilities of the NOCTERRA platform.
 
 ## 🌍 Globe Visualization
 

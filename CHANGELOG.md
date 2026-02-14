@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to AERIS will be documented in this file.
+All notable changes to NOCTERRA will be documented in this file.
 
 ## [2.0.0] - 2026-02-14
 

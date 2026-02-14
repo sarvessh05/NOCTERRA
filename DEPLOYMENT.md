@@ -1,4 +1,4 @@
-# AERIS Deployment Guide
+# NOCTERRA Deployment Guide
 
 ## 🚀 Quick Deployment Options
 

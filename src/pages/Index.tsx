@@ -90,7 +90,7 @@ export default function Index() {
                 transition={{ delay: 0.3, duration: 0.8 }}
                 className="text-sm font-body tracking-[0.3em] uppercase text-muted-foreground mb-4"
               >
-                AERIS
+                NOCTERRA
               </motion.p>
 
               <motion.h1
@@ -143,7 +143,7 @@ export default function Index() {
             <div className="flex items-center gap-2 pointer-events-auto">
               <div className="w-2 h-2 rounded-full bg-primary animate-glow-pulse" />
               <span className="font-display text-sm font-semibold text-foreground tracking-wider">
-                AERIS
+                NOCTERRA
               </span>
             </div>
 
@@ -320,7 +320,7 @@ export default function Index() {
 
           {/* Footer */}
           <footer className="relative z-10 text-center py-12 text-xs text-muted-foreground">
-            <p className="font-display tracking-wider">AERIS — The Earth That Breathes</p>
+            <p className="font-display tracking-wider">NOCTERRA — The Earth That Breathes</p>
           </footer>
         </div>
       )}

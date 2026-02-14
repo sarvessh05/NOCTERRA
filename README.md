@@ -1,8 +1,8 @@
-# AERIS - Air Quality Visualization Platform
+# NOCTERRA - Air Quality Visualization Platform
 
-![AERIS Banner](https://img.shields.io/badge/AERIS-Air%20Quality%20Visualization-4dd0e1?style=for-the-badge)
+![NOCTERRA Banner](https://img.shields.io/badge/NOCTERRA-Air%20Quality%20Visualization-4dd0e1?style=for-the-badge)
 
-**AERIS** (Atmospheric Environmental Real-time Information System) is an interactive 3D globe visualization platform that displays real-time air quality data for cities worldwide. Experience the Earth's atmosphere like never before with stunning cinematic visuals, daily city rotation, and predictive analytics.
+**NOCTERRA** (Nocturnal Observation & Climate Tracking for Environmental Real-time Research & Analysis) is an interactive 3D globe visualization platform that displays real-time air quality data for cities worldwide. Experience the Earth's atmosphere like never before with stunning cinematic visuals, daily city rotation, and predictive analytics.
 
 ## 🌐 Live Demo
 
@@ -102,10 +102,10 @@ See [DAILY_CITY_ROTATION.md](./DAILY_CITY_ROTATION.md) and [GLOBE_UPGRADE.md](./
 
 ```bash
 # Clone the repository
-git clone https://github.com/ghotekarsarvesh05-stack/AERIS.git
+git clone https://github.com/sarvessh05/NOCTERRA.git
 
 # Navigate to project directory
-cd AERIS
+cd NOCTERRA
 
 # Install dependencies
 npm install
@@ -190,7 +190,7 @@ npm run test:watch   # Run tests in watch mode
 ## 🗂️ Project Structure
 
 ```
-AERIS/
+NOCTERRA/
 ├── src/
 │   ├── components/       # React components
 │   │   ├── GlobeScene.tsx          # 3D globe with cinematic rendering
@@ -266,4 +266,4 @@ This project is open source and available under the MIT License.
 
 ---
 
-**AERIS** - The Earth That Breathes
+**NOCTERRA** - The Earth That Breathes

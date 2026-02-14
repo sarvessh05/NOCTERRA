@@ -1,4 +1,4 @@
-# AERIS Quick Start Guide
+# NOCTERRA Quick Start Guide
 
 ## 🚀 Get Started in 5 Minutes
 
@@ -6,8 +6,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/ghotekarsarvesh05-stack/AERIS.git
-cd AERIS
+git clone https://github.com/sarvessh05/NOCTERRA.git
+cd NOCTERRA
 
 # Install dependencies
 npm install
@@ -82,7 +82,7 @@ Open http://localhost:8080 in your browser.
 ## 🎨 UI Tour
 
 ### Top Bar (After Entering)
-- **AERIS Logo** (left) - Brand identity with pulsing dot
+- **NOCTERRA Logo** (left) - Brand identity with pulsing dot
 - **Search Icon** - Find cities quickly
 - **Sparkle Icon** ⚡ - AI Insights (only when city selected)
 - **Comparison Icon** ⚡ - Compare cities (only when city selected)
@@ -171,7 +171,7 @@ npm run dev -- --port 3000
 
 ### 1-Minute Demo
 ```
-"AERIS visualizes global air quality in 3D. 
+"NOCTERRA visualizes global air quality in 3D. 
 Watch as I click Mumbai... 
 Now I'll ask our AI to explain today's air quality...
 [Click sparkle, then Explain]
@@ -185,7 +185,7 @@ Mumbai has 31% better air quality!"
 ### 3-Minute Demo
 ```
 [Show landing page]
-"AERIS - The Earth That Breathes. Let's enter..."
+"NOCTERRA - The Earth That Breathes. Let's enter..."
 
 [Click Enter, globe rotates]
 "Here's our 3D globe with real-time city markers.
@@ -279,7 +279,7 @@ npm run preview
 ## 📞 Support
 
 - **Documentation**: See README.md, AI_FEATURES.md
-- **Issues**: https://github.com/ghotekarsarvesh05-stack/AERIS/issues
+- **Issues**: https://github.com/sarvessh05/NOCTERRA/issues
 - **Discussions**: GitHub Discussions (coming soon)
 
 ---
