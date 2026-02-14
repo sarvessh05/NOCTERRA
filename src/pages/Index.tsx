@@ -4,8 +4,11 @@ import GlobeScene from "@/components/GlobeScene";
 import PredictionPanel from "@/components/PredictionPanel";
 import SimulationControls from "@/components/SimulationControls";
 import HealthCards from "@/components/HealthCards";
+import AIInsightPanel from "@/components/AIInsightPanel";
+import AIForecastPanel from "@/components/AIForecastPanel";
+import CityComparison from "@/components/CityComparison";
 import { CityData, cities as allCities } from "@/data/cities";
-import { MapPin, Search } from "lucide-react";
+import { MapPin, Search, Sparkles, GitCompare } from "lucide-react";
 
 export default function Index() {
   const [entered, setEntered] = useState(false);
@@ -15,6 +18,8 @@ export default function Index() {
   const [simulationIntensity, setSimulationIntensity] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [showAIInsight, setShowAIInsight] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
 
   const handleEnter = useCallback(() => setEntered(true), []);
   const handleCitySelect = useCallback((city: CityData | null) => setSelectedCity(city), []);
@@ -134,16 +139,38 @@ export default function Index() {
               <button
                 onClick={() => setShowSearch(!showSearch)}
                 className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                title="Search City"
               >
                 <Search className="w-4 h-4" />
               </button>
+              {selectedCity && (
+                <>
+                  <button
+                    onClick={() => setShowAIInsight(!showAIInsight)}
+                    className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors relative"
+                    title="AI Insights"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                  </button>
+                  <button
+                    onClick={() => setShowComparison(true)}
+                    className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                    title="Compare Cities"
+                  >
+                    <GitCompare className="w-4 h-4" />
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => {
                   setSelectedCity(null);
                   setSimulationActive(false);
                   setSimulationIntensity(0);
+                  setShowAIInsight(false);
                 }}
                 className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                title="Reset View"
               >
                 <MapPin className="w-4 h-4" />
               </button>
@@ -173,18 +200,42 @@ export default function Index() {
           </AnimatePresence>
 
           {/* Prediction Panel - right side */}
-          <div className="fixed top-20 right-6 z-20">
+          <div className="fixed top-20 right-6 z-20 space-y-4 max-w-md">
             <AnimatePresence>
               {selectedCity && (
-                <PredictionPanel
-                  city={selectedCity}
-                  futureMode={futureMode}
-                  onToggleFuture={() => setFutureMode(!futureMode)}
-                  onClose={() => setSelectedCity(null)}
-                />
+                <>
+                  <PredictionPanel
+                    city={selectedCity}
+                    futureMode={futureMode}
+                    onToggleFuture={() => setFutureMode(!futureMode)}
+                    onClose={() => setSelectedCity(null)}
+                  />
+                  
+                  {showAIInsight && (
+                    <AIInsightPanel
+                      city={selectedCity}
+                      onClose={() => setShowAIInsight(false)}
+                    />
+                  )}
+                </>
               )}
             </AnimatePresence>
           </div>
+
+          {/* AI Forecast Panel - bottom center */}
+          {selectedCity && (
+            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-20 w-full max-w-3xl px-6">
+              <AnimatePresence>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                >
+                  <AIForecastPanel city={selectedCity} />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Simulation Controls - bottom left */}
           <div className="fixed bottom-6 left-6 z-20">
@@ -207,6 +258,16 @@ export default function Index() {
               Click on any city marker to explore its atmosphere
             </motion.p>
           )}
+
+          {/* City Comparison Modal */}
+          <AnimatePresence>
+            {showComparison && selectedCity && (
+              <CityComparison
+                initialCity={selectedCity}
+                onClose={() => setShowComparison(false)}
+              />
+            )}
+          </AnimatePresence>
         </>
       )}
 
