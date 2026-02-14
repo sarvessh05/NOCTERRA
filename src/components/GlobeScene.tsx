@@ -1,4 +1,4 @@
-import { useRef, useMemo, useCallback } from "react";
+import { useRef, useMemo, useCallback, useEffect } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
@@ -15,11 +15,26 @@ function EarthWithMarkers({
   selectedCity: (typeof cities)[0] | null;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const texture = useLoader(THREE.TextureLoader, earthNightTexture);
+  const earthRef = useRef<THREE.Mesh>(null);
+  const { gl } = useThree();
+  
+  const nightMap = useLoader(THREE.TextureLoader, earthNightTexture);
 
-  useFrame((_state, delta) => {
+  useEffect(() => {
+    if (nightMap) {
+      nightMap.anisotropy = gl.capabilities.getMaxAnisotropy();
+    }
+  }, [nightMap, gl]);
+
+  useFrame((state, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.05;
+      groupRef.current.rotation.y += delta * 0.05; // Smooth visible rotation
+    }
+    
+    // Subtle emissive pulsing - barely noticeable, feels alive
+    if (earthRef.current) {
+      const material = earthRef.current.material as THREE.MeshStandardMaterial;
+      material.emissiveIntensity = 1.8 + Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
     }
   });
 
@@ -27,18 +42,40 @@ function EarthWithMarkers({
 
   return (
     <group ref={groupRef}>
-      {/* Earth sphere with night texture */}
-      <Sphere args={[2, 64, 64]}>
-        <meshBasicMaterial map={texture} toneMapped={false} />
-      </Sphere>
+      {/* Main Earth sphere with emissive night lights */}
+      <mesh ref={earthRef}>
+        <sphereGeometry args={[2, 128, 128]} />
+        <meshStandardMaterial
+          map={nightMap}
+          emissiveMap={nightMap}
+          emissive="#ffffff"
+          emissiveIntensity={1.8}
+          roughness={1}
+          metalness={0}
+          toneMapped={false}
+        />
+      </mesh>
 
-      {/* Atmospheric glow */}
-      <Sphere args={[2.08, 64, 64]}>
+      {/* Emissive glow layer - simulates bloom effect */}
+      <mesh>
+        <sphereGeometry args={[2.01, 128, 128]} />
         <meshBasicMaterial
-          color={new THREE.Color("hsl(200, 80%, 50%)")}
+          map={nightMap}
           transparent
-          opacity={0.06}
+          opacity={0.3}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Cinematic atmosphere rim - subtle halo */}
+      <Sphere args={[2.05, 64, 64]}>
+        <meshBasicMaterial
+          color="#4fa3ff"
+          transparent
+          opacity={0.15}
           side={THREE.BackSide}
+          blending={THREE.AdditiveBlending}
         />
       </Sphere>
 
@@ -53,13 +90,14 @@ function EarthWithMarkers({
         />
       </Sphere>
 
-      {/* Outer glow */}
+      {/* Outer atmospheric glow */}
       <Sphere args={[2.3, 32, 32]}>
         <meshBasicMaterial
-          color={new THREE.Color("hsl(200, 80%, 50%)")}
+          color="#4fa3ff"
           transparent
           opacity={0.03}
           side={THREE.BackSide}
+          blending={THREE.AdditiveBlending}
         />
       </Sphere>
 
@@ -227,12 +265,17 @@ export default function GlobeScene({
     <Canvas
       camera={{ position: [0, 0, entered ? 6 : 12], fov: 45 }}
       style={{ position: "absolute", inset: 0 }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{ 
+        antialias: true, 
+        alpha: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.2
+      }}
     >
       <color attach="background" args={["#060b18"]} />
-      <ambientLight intensity={0.3} />
-      <pointLight position={[10, 5, 10]} intensity={0.8} color="#4dd0e1" />
-      <pointLight position={[-10, -5, -10]} intensity={0.3} color="#1a237e" />
+      
+      {/* Minimal lighting - emissive dominance for night mode */}
+      <ambientLight intensity={0.2} />
 
       <Stars radius={100} depth={50} count={3000} factor={3} fade speed={0.5} />
       <FloatingParticles simulationIntensity={simulationIntensity} />
@@ -247,10 +290,12 @@ export default function GlobeScene({
       <OrbitControls
         enableZoom
         enablePan={false}
+        enableRotate={true}
         minDistance={3.5}
         maxDistance={12}
         autoRotate={!selectedCity}
-        autoRotateSpeed={0.3}
+        autoRotateSpeed={0.5}
+        rotateSpeed={0.5}
       />
     </Canvas>
   );

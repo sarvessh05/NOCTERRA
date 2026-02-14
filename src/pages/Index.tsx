@@ -64,7 +64,7 @@ export default function Index() {
       <AnimatePresence>
         {!entered && (
           <motion.div
-            className="fixed inset-0 z-20 flex flex-col items-center justify-center"
+            className="fixed inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md"
             exit={{ opacity: 0 }}
             transition={{ duration: 1.2 }}
           >
