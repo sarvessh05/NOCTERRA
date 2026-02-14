@@ -4,6 +4,10 @@
 
 **AERIS** (Atmospheric Environmental Real-time Information System) is an interactive 3D globe visualization platform that displays real-time air quality data for cities worldwide. Experience the Earth's atmosphere like never before with stunning cinematic visuals, daily city rotation, and predictive analytics.
 
+## 🌐 Live Demo
+
+**[View Live Project](#)** _(Link will be added after deployment)_
+
 ## ✨ Features
 
 ### 🌍 Interactive 3D Globe
@@ -38,6 +42,11 @@
 - **7-Day Forecasting**: View predicted air quality trends
 - **Future Mode**: Simulate projected AQI increases
 - **Pollution Simulation**: Adjust intensity to visualize scenarios
+- **AI-Powered Health Impact**: Dynamic health analysis per city
+  - Respiratory risk assessment
+  - Visibility index
+  - Outdoor activity recommendations
+  - City-specific AI insights
 
 ### 🎨 User Experience
 - **Scroll-aware UI**: Globe controls fade when scrolling to Health Impact section

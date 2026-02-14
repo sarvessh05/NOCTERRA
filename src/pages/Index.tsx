@@ -316,7 +316,7 @@ export default function Index() {
       {/* Health Cards Section (scrollable below) */}
       {entered && (
         <div className="relative z-10 mt-[100vh]">
-          <HealthCards />
+          <HealthCards city={selectedCity} />
 
           {/* Footer */}
           <footer className="relative z-10 text-center py-12 text-xs text-muted-foreground">

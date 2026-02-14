@@ -1,76 +1,150 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wind, Eye, Activity } from "lucide-react";
+import { Wind, Eye, Activity, Loader2 } from "lucide-react";
+import { CityData, getAqiColor } from "@/data/cities";
+import { getHealthImpact, HealthImpactData } from "@/services/gemini";
 
-const cards = [
-  {
-    icon: Activity,
-    title: "Respiratory Risk",
-    value: "Moderate",
-    description: "Sensitive groups should limit outdoor exposure",
-    color: "hsl(var(--aqi-moderate))",
-  },
-  {
-    icon: Eye,
-    title: "Visibility Index",
-    value: "6.2 km",
-    description: "Reduced due to particulate concentration",
-    color: "hsl(var(--aqi-unhealthy-sensitive))",
-  },
-  {
-    icon: Wind,
-    title: "Outdoor Activity",
-    value: "Limited",
-    description: "Morning hours recommended for exercise",
-    color: "hsl(var(--aqi-good))",
-  },
-];
+interface HealthCardsProps {
+  city: CityData | null;
+}
 
-export default function HealthCards() {
+export default function HealthCards({ city }: HealthCardsProps) {
+  const [healthData, setHealthData] = useState<HealthImpactData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (city) {
+      loadHealthImpact();
+    }
+  }, [city?.name, city?.aqi]);
+
+  const loadHealthImpact = async () => {
+    if (!city) return;
+    
+    setLoading(true);
+    try {
+      const data = await getHealthImpact(city.name, city.aqi);
+      setHealthData(data);
+    } catch (error) {
+      console.error("Failed to get health impact:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Default cards when no city selected
+  const defaultCards = [
+    {
+      icon: Activity,
+      title: "Respiratory Risk",
+      value: "Select a city",
+      description: "Click on any city marker to see health impact",
+      color: "hsl(var(--aqi-moderate))",
+    },
+    {
+      icon: Eye,
+      title: "Visibility Index",
+      value: "N/A",
+      description: "Real-time data for selected city",
+      color: "hsl(var(--aqi-unhealthy-sensitive))",
+    },
+    {
+      icon: Wind,
+      title: "Outdoor Activity",
+      value: "N/A",
+      description: "AI-powered recommendations",
+      color: "hsl(var(--aqi-good))",
+    },
+  ];
+
+  const cards = healthData
+    ? [
+        {
+          icon: Activity,
+          title: "Respiratory Risk",
+          value: healthData.respiratoryRisk.level,
+          description: healthData.respiratoryRisk.description,
+          color: healthData.respiratoryRisk.color,
+        },
+        {
+          icon: Eye,
+          title: "Visibility Index",
+          value: healthData.visibility.value,
+          description: healthData.visibility.description,
+          color: healthData.visibility.color,
+        },
+        {
+          icon: Wind,
+          title: "Outdoor Activity",
+          value: healthData.outdoorActivity.level,
+          description: healthData.outdoorActivity.description,
+          color: healthData.outdoorActivity.color,
+        },
+      ]
+    : defaultCards;
+
   return (
     <section className="relative z-10 px-6 py-20 max-w-5xl mx-auto">
       <motion.h2
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="font-display text-3xl font-bold text-center mb-12 text-foreground glow-text"
+        className="font-display text-3xl font-bold text-center mb-4 text-foreground glow-text"
       >
-        Health Impact
+        Health Impact {city && `- ${city.name}`}
       </motion.h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {cards.map((card, i) => (
-          <motion.div
-            key={card.title}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.15, duration: 0.5 }}
-            whileHover={{ scale: 1.03, rotateY: 3, rotateX: -3 }}
-            className="glass-panel p-6 cursor-default group"
-            style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
-          >
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
-              style={{ backgroundColor: `${card.color}20` }}
-            >
-              <card.icon className="w-6 h-6" style={{ color: card.color }} />
-            </div>
-            <h3 className="font-display font-semibold text-foreground mb-1">{card.title}</h3>
-            <p className="text-lg font-bold mb-2" style={{ color: card.color }}>
-              {card.value}
-            </p>
-            <p className="text-sm text-muted-foreground">{card.description}</p>
+      {city && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center text-sm text-muted-foreground mb-8"
+        >
+          AI-powered health analysis for current air quality
+        </motion.p>
+      )}
 
-            {/* Glow pulse on hover */}
-            <div
-              className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-              style={{
-                boxShadow: `0 0 30px ${card.color}20, inset 0 0 30px ${card.color}08`,
-              }}
-            />
-          </motion.div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
+          <p className="text-sm text-muted-foreground">Analyzing health impact...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {cards.map((card, i) => (
+            <motion.div
+              key={card.title}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.15, duration: 0.5 }}
+              whileHover={{ scale: 1.03, rotateY: 3, rotateX: -3 }}
+              className="glass-panel p-6 cursor-default group"
+              style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
+            >
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
+                style={{ backgroundColor: `${card.color}20` }}
+              >
+                <card.icon className="w-6 h-6" style={{ color: card.color }} />
+              </div>
+              <h3 className="font-display font-semibold text-foreground mb-1">{card.title}</h3>
+              <p className="text-lg font-bold mb-2" style={{ color: card.color }}>
+                {card.value}
+              </p>
+              <p className="text-sm text-muted-foreground">{card.description}</p>
+
+              {/* Glow pulse on hover */}
+              <div
+                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                style={{
+                  boxShadow: `0 0 30px ${card.color}20, inset 0 0 30px ${card.color}08`,
+                }}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

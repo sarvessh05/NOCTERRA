@@ -8,6 +8,24 @@ export interface AirQualityInsight {
   confidence: number;
 }
 
+export interface HealthImpactData {
+  respiratoryRisk: {
+    level: string;
+    description: string;
+    color: string;
+  };
+  visibility: {
+    value: string;
+    description: string;
+    color: string;
+  };
+  outdoorActivity: {
+    level: string;
+    description: string;
+    color: string;
+  };
+}
+
 export async function getAirQualityInsight(
   cityName: string,
   aqi: number,
@@ -196,4 +214,119 @@ function generateRuleBasedForecast(
   }
   
   return forecast;
+}
+
+export async function getHealthImpact(
+  cityName: string,
+  aqi: number
+): Promise<HealthImpactData> {
+  const prompt = `You are a health expert analyzing air quality impact for ${cityName}.
+
+Current AQI: ${aqi}
+
+Provide health impact analysis in JSON format:
+
+{
+  "respiratoryRisk": {
+    "level": "Low/Moderate/High/Very High",
+    "description": "1-2 sentences about respiratory health risks in ${cityName} at this AQI",
+    "color": "hsl color code based on risk"
+  },
+  "visibility": {
+    "value": "X km or Good/Fair/Poor",
+    "description": "How air quality affects visibility in ${cityName}",
+    "color": "hsl color code"
+  },
+  "outdoorActivity": {
+    "level": "Unrestricted/Limited/Avoid",
+    "description": "Specific outdoor activity recommendations for ${cityName} residents",
+    "color": "hsl color code"
+  }
+}
+
+Be specific to ${cityName}. Use these color guidelines:
+- Good (AQI 0-50): "hsl(142, 76%, 50%)"
+- Moderate (51-100): "hsl(45, 100%, 55%)"
+- Unhealthy for Sensitive (101-150): "hsl(25, 100%, 55%)"
+- Unhealthy (151-200): "hsl(0, 84%, 55%)"
+- Very Unhealthy (201-300): "hsl(280, 80%, 55%)"
+- Hazardous (301+): "hsl(320, 90%, 40%)"
+
+Return ONLY valid JSON.`;
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 600,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get health impact');
+    }
+
+    const data = await response.json();
+    const text = data.candidates[0].content.parts[0].text;
+    
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Invalid response format');
+    }
+    
+    const healthData = JSON.parse(jsonMatch[0]);
+    return healthData;
+  } catch (error) {
+    console.error('Health Impact API error:', error);
+    // Fallback response
+    const getColorForAqi = (aqi: number) => {
+      if (aqi <= 50) return "hsl(142, 76%, 50%)";
+      if (aqi <= 100) return "hsl(45, 100%, 55%)";
+      if (aqi <= 150) return "hsl(25, 100%, 55%)";
+      if (aqi <= 200) return "hsl(0, 84%, 55%)";
+      if (aqi <= 300) return "hsl(280, 80%, 55%)";
+      return "hsl(320, 90%, 40%)";
+    };
+
+    return {
+      respiratoryRisk: {
+        level: aqi > 150 ? "High" : aqi > 100 ? "Moderate" : "Low",
+        description: aqi > 150 
+          ? `High respiratory risk in ${cityName}. Sensitive groups should stay indoors.`
+          : aqi > 100
+          ? `Moderate risk in ${cityName}. Sensitive individuals should limit prolonged outdoor exertion.`
+          : `Low respiratory risk in ${cityName}. Air quality is acceptable.`,
+        color: getColorForAqi(aqi)
+      },
+      visibility: {
+        value: aqi > 150 ? "< 5 km" : aqi > 100 ? "5-10 km" : "> 10 km",
+        description: aqi > 150
+          ? `Poor visibility in ${cityName} due to high particulate concentration.`
+          : aqi > 100
+          ? `Moderate visibility in ${cityName}. Some haze may be present.`
+          : `Good visibility in ${cityName}. Clear skies expected.`,
+        color: getColorForAqi(aqi)
+      },
+      outdoorActivity: {
+        level: aqi > 150 ? "Avoid" : aqi > 100 ? "Limited" : "Unrestricted",
+        description: aqi > 150
+          ? `Avoid outdoor activities in ${cityName}. Stay indoors with air purifiers.`
+          : aqi > 100
+          ? `Limit outdoor activities in ${cityName}. Morning hours are best for exercise.`
+          : `Unrestricted outdoor activities in ${cityName}. Enjoy the fresh air!`,
+        color: getColorForAqi(aqi)
+      }
+    };
+  }
 }
