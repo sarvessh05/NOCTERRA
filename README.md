@@ -6,17 +6,19 @@
 
 ## 🌐 Live Demo
 
-**[View Live Project](#)** _(Link will be added after deployment)_
+**[View Live Project](#)** _https://nocterra.vercel.app/_
 
 ## ✨ Features
 
 ### 🌍 Interactive 3D Globe
+
 - **Cinematic rendering** with emissive night lights and atmospheric glow
 - **Real-time rotation** with smooth user interaction (drag to spin)
 - **ACES Filmic tone mapping** for premium visual quality
 - **High-resolution sphere** (128x128 segments) for smooth rendering
 
 ### 🏙️ Smart City System
+
 - **60+ Famous Cities** across 6 continents
 - **Daily Rotation**: 10 cities per continent change every 24 hours
 - **Permanent Cities**: Nashik always visible (your home city!)
@@ -24,6 +26,7 @@
 - **Color-coded markers** showing pollution levels
 
 ### 🤖 AI-Powered Features
+
 - **AI Insights** ⚡: Get personalized explanations powered by Google Gemini AI
   - "Explain Today's Air" button for instant AI analysis
   - Health recommendations and outdoor activity advice
@@ -34,6 +37,7 @@
   - AI confidence percentage display
 
 ### 📊 Advanced Analytics
+
 - **City Comparison Mode** ⚡: Side-by-side city analysis
   - Split-screen visualization
   - Animated comparison bars
@@ -49,6 +53,7 @@
   - City-specific AI insights
 
 ### 🎨 User Experience
+
 - **Scroll-aware UI**: Globe controls fade when scrolling to Health Impact section
 - **Health Impact Cards**: Understand respiratory health effects
 - **City Search**: Quickly find specific cities
@@ -74,18 +79,21 @@
 ### Latest Updates (v2.0)
 
 **Cinematic Globe Rendering**
+
 - Emissive night lights with custom glow effect
 - ACES Filmic tone mapping for cinema-grade visuals
 - Atmospheric rim with additive blending
 - Smooth rotation and user interaction
 
 **Smart City System**
+
 - 60+ famous cities across all continents
 - Daily rotation: 10 cities per continent change every 24 hours
 - Nashik permanently visible (never rotates out)
 - Real-time AQI updates every 30 seconds with dynamic pin colors
 
 **Enhanced UX**
+
 - Scroll-aware UI that fades when viewing Health Impact section
 - Improved globe interaction (drag to spin)
 - Better performance with optimized rendering
@@ -178,14 +186,14 @@ npm run test:watch   # Run tests in watch mode
 
 ## 📊 AQI Categories
 
-| AQI Range | Category | Color |
-|-----------|----------|-------|
-| 0-50 | Good | Green |
-| 51-100 | Moderate | Yellow |
-| 101-150 | Unhealthy for Sensitive Groups | Orange |
-| 151-200 | Unhealthy | Red |
-| 201-300 | Very Unhealthy | Purple |
-| 301+ | Hazardous | Maroon |
+| AQI Range | Category                       | Color  |
+| --------- | ------------------------------ | ------ |
+| 0-50      | Good                           | Green  |
+| 51-100    | Moderate                       | Yellow |
+| 101-150   | Unhealthy for Sensitive Groups | Orange |
+| 151-200   | Unhealthy                      | Red    |
+| 201-300   | Very Unhealthy                 | Purple |
+| 301+      | Hazardous                      | Maroon |
 
 ## 🗂️ Project Structure
 
@@ -227,6 +235,7 @@ The application uses a combination of simulated and real-time air quality data:
 - **Daily Rotation**: Deterministic algorithm selects 10 cities per continent daily
 
 For production deployment, integrate with:
+
 - [OpenAQ](https://openaq.org/) - Real-time air quality data
 - [AirVisual](https://www.iqair.com/air-pollution-data-api) - Global AQI monitoring
 - [EPA AirNow](https://www.airnow.gov/international/us-embassies-and-consulates/) - US Embassy data
