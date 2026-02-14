@@ -212,10 +212,10 @@ export default function Index() {
           </AnimatePresence>
 
           {/* Prediction Panel - right side */}
-          <div className="fixed top-20 right-6 z-20 space-y-4 max-w-md pointer-events-none">
+          <div className="fixed top-20 right-6 z-20 max-w-md pointer-events-none">
             <AnimatePresence>
               {selectedCity && !scrolled && (
-                <>
+                <div className="space-y-4">
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -243,7 +243,7 @@ export default function Index() {
                       />
                     </motion.div>
                   )}
-                </>
+                </div>
               )}
             </AnimatePresence>
           </div>
