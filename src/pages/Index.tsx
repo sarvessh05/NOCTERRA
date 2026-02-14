@@ -211,31 +211,57 @@ export default function Index() {
             )}
           </AnimatePresence>
 
-          {/* Prediction Panel - right side */}
-          <div className="fixed top-20 right-6 z-20 max-w-md pointer-events-none">
-            <AnimatePresence>
-              {selectedCity && !scrolled && (
-                <div className="space-y-4">
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className="pointer-events-auto"
-                  >
-                    <PredictionPanel
-                      city={selectedCity}
-                      futureMode={futureMode}
-                      onToggleFuture={() => setFutureMode(!futureMode)}
-                      onClose={() => setSelectedCity(null)}
-                    />
-                  </motion.div>
-                  
+          {/* Panels Container - Horizontal Layout */}
+          <AnimatePresence>
+            {selectedCity && !scrolled && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed top-20 right-6 z-20 flex gap-4 pointer-events-none"
+              >
+                {/* AI Forecast Panel - Left */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ 
+                    opacity: 1, 
+                    x: showAIInsight ? -320 : 0 // Slide left when AI Insights opens
+                  }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                  className="pointer-events-auto w-80"
+                >
+                  <AIForecastPanel city={selectedCity} />
+                </motion.div>
+
+                {/* Prediction Panel - Middle */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ 
+                    opacity: 1, 
+                    x: showAIInsight ? -320 : 0 // Slide left when AI Insights opens
+                  }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                  className="pointer-events-auto w-80"
+                >
+                  <PredictionPanel
+                    city={selectedCity}
+                    futureMode={futureMode}
+                    onToggleFuture={() => setFutureMode(!futureMode)}
+                    onClose={() => setSelectedCity(null)}
+                  />
+                </motion.div>
+
+                {/* AI Insight Panel - Right (slides in) */}
+                <AnimatePresence>
                   {showAIInsight && (
                     <motion.div
-                      initial={{ opacity: 0, x: 20 }}
+                      initial={{ opacity: 0, x: 100 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="pointer-events-auto"
+                      exit={{ opacity: 0, x: 100 }}
+                      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                      className="pointer-events-auto w-80"
                     >
                       <AIInsightPanel
                         city={selectedCity}
@@ -243,26 +269,10 @@ export default function Index() {
                       />
                     </motion.div>
                   )}
-                </div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* AI Forecast Panel - bottom center */}
-          {selectedCity && !scrolled && (
-            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-20 w-full max-w-3xl px-6 pointer-events-none">
-              <AnimatePresence>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="pointer-events-auto"
-                >
-                  <AIForecastPanel city={selectedCity} />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Simulation Controls - bottom left */}
           <div className="fixed bottom-6 left-6 z-20 pointer-events-none">

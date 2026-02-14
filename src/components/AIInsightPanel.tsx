@@ -39,7 +39,7 @@ export default function AIInsightPanel({ city, onClose }: AIInsightPanelProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="glass-panel p-6 w-full max-w-md"
+      className="glass-panel p-4 w-full max-h-[calc(100vh-6rem)] overflow-y-auto"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
