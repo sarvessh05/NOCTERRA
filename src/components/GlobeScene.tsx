@@ -2,7 +2,7 @@ import { useRef, useMemo, useCallback, useEffect } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
-import { cities as staticCities, getAqiColor, CityData } from "@/data/cities";
+import { getActiveCities, getAqiColor, CityData } from "@/data/cities";
 import { useRealtimeAQI } from "@/hooks/use-realtime-aqi";
 import earthNightTexture from "@/assets/earth-night.jpg";
 
@@ -21,12 +21,8 @@ function EarthWithMarkers({
   
   const nightMap = useLoader(THREE.TextureLoader, earthNightTexture);
   
-  // Use real-time AQI updates
-  const cities = useRealtimeAQI(staticCities, 30000); // Update every 30 seconds
-  
-  const nightMap = useLoader(THREE.TextureLoader, earthNightTexture);
-  
-  // Use real-time AQI updates
+  // Get active cities for today and apply real-time AQI updates
+  const staticCities = useMemo(() => getActiveCities(), []);
   const cities = useRealtimeAQI(staticCities, 30000); // Update every 30 seconds
 
   useEffect(() => {

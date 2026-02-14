@@ -8,6 +8,7 @@ export function useRealtimeAQI(cities: CityData[], updateInterval: number = 3000
     const interval = setInterval(() => {
       setUpdatedCities(prevCities =>
         prevCities.map(city => {
+          // All cities get real-time AQI updates (including Nashik)
           // Simulate real-time AQI changes (±5 points)
           const change = Math.floor(Math.random() * 11) - 5; // -5 to +5
           const newAqi = Math.max(0, Math.min(500, city.aqi + change));
