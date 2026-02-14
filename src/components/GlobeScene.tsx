@@ -2,7 +2,8 @@ import { useRef, useMemo, useCallback, useEffect } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
-import { cities, getAqiColor } from "@/data/cities";
+import { cities as staticCities, getAqiColor, CityData } from "@/data/cities";
+import { useRealtimeAQI } from "@/hooks/use-realtime-aqi";
 import earthNightTexture from "@/assets/earth-night.jpg";
 
 function EarthWithMarkers({
@@ -11,14 +12,22 @@ function EarthWithMarkers({
   selectedCity,
 }: {
   simulationIntensity?: number;
-  onCitySelect: (city: (typeof cities)[0]) => void;
-  selectedCity: (typeof cities)[0] | null;
+  onCitySelect: (city: CityData) => void;
+  selectedCity: CityData | null;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const earthRef = useRef<THREE.Mesh>(null);
   const { gl } = useThree();
   
   const nightMap = useLoader(THREE.TextureLoader, earthNightTexture);
+  
+  // Use real-time AQI updates
+  const cities = useRealtimeAQI(staticCities, 30000); // Update every 30 seconds
+  
+  const nightMap = useLoader(THREE.TextureLoader, earthNightTexture);
+  
+  // Use real-time AQI updates
+  const cities = useRealtimeAQI(staticCities, 30000); // Update every 30 seconds
 
   useEffect(() => {
     if (nightMap) {
@@ -131,8 +140,8 @@ function CityMarker({
   isSelected,
   simulationIntensity = 0,
 }: {
-  city: (typeof cities)[0];
-  onSelect: (city: (typeof cities)[0]) => void;
+  city: CityData;
+  onSelect: (city: CityData) => void;
   isSelected: boolean;
   simulationIntensity?: number;
 }) {
@@ -244,8 +253,8 @@ function CameraController({ target }: { target?: THREE.Vector3 }) {
 }
 
 interface GlobeSceneProps {
-  onCitySelect: (city: (typeof cities)[0] | null) => void;
-  selectedCity: (typeof cities)[0] | null;
+  onCitySelect: (city: CityData | null) => void;
+  selectedCity: CityData | null;
   simulationIntensity: number;
   entered: boolean;
 }

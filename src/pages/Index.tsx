@@ -1,4 +1,4 @@
-import { useState, useCallback, Suspense } from "react";
+import { useState, useCallback, Suspense, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import GlobeScene from "@/components/GlobeScene";
 import PredictionPanel from "@/components/PredictionPanel";
@@ -20,9 +20,21 @@ export default function Index() {
   const [showSearch, setShowSearch] = useState(false);
   const [showAIInsight, setShowAIInsight] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const handleEnter = useCallback(() => setEntered(true), []);
   const handleCitySelect = useCallback((city: CityData | null) => setSelectedCity(city), []);
+
+  // Handle scroll to hide/show globe UI
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setScrolled(scrollPosition > 100);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleSearch = useCallback(
     (e: React.FormEvent) => {
@@ -124,18 +136,18 @@ export default function Index() {
           {/* Top bar */}
           <motion.header
             initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ opacity: scrolled ? 0 : 1, y: scrolled ? -20 : 0 }}
             transition={{ delay: 0.5 }}
-            className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4"
+            className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-none"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pointer-events-auto">
               <div className="w-2 h-2 rounded-full bg-primary animate-glow-pulse" />
               <span className="font-display text-sm font-semibold text-foreground tracking-wider">
                 AERIS
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 pointer-events-auto">
               <button
                 onClick={() => setShowSearch(!showSearch)}
                 className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
@@ -200,22 +212,36 @@ export default function Index() {
           </AnimatePresence>
 
           {/* Prediction Panel - right side */}
-          <div className="fixed top-20 right-6 z-20 space-y-4 max-w-md">
+          <div className="fixed top-20 right-6 z-20 space-y-4 max-w-md pointer-events-none">
             <AnimatePresence>
-              {selectedCity && (
+              {selectedCity && !scrolled && (
                 <>
-                  <PredictionPanel
-                    city={selectedCity}
-                    futureMode={futureMode}
-                    onToggleFuture={() => setFutureMode(!futureMode)}
-                    onClose={() => setSelectedCity(null)}
-                  />
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="pointer-events-auto"
+                  >
+                    <PredictionPanel
+                      city={selectedCity}
+                      futureMode={futureMode}
+                      onToggleFuture={() => setFutureMode(!futureMode)}
+                      onClose={() => setSelectedCity(null)}
+                    />
+                  </motion.div>
                   
                   {showAIInsight && (
-                    <AIInsightPanel
-                      city={selectedCity}
-                      onClose={() => setShowAIInsight(false)}
-                    />
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="pointer-events-auto"
+                    >
+                      <AIInsightPanel
+                        city={selectedCity}
+                        onClose={() => setShowAIInsight(false)}
+                      />
+                    </motion.div>
                   )}
                 </>
               )}
@@ -223,13 +249,14 @@ export default function Index() {
           </div>
 
           {/* AI Forecast Panel - bottom center */}
-          {selectedCity && (
-            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-20 w-full max-w-3xl px-6">
+          {selectedCity && !scrolled && (
+            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-20 w-full max-w-3xl px-6 pointer-events-none">
               <AnimatePresence>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
+                  className="pointer-events-auto"
                 >
                   <AIForecastPanel city={selectedCity} />
                 </motion.div>
@@ -238,17 +265,22 @@ export default function Index() {
           )}
 
           {/* Simulation Controls - bottom left */}
-          <div className="fixed bottom-6 left-6 z-20">
-            <SimulationControls
-              intensity={simulationIntensity}
-              onIntensityChange={setSimulationIntensity}
-              active={simulationActive}
-              onToggle={() => setSimulationActive(!simulationActive)}
-            />
+          <div className="fixed bottom-6 left-6 z-20 pointer-events-none">
+            <motion.div
+              animate={{ opacity: scrolled ? 0 : 1 }}
+              className="pointer-events-auto"
+            >
+              <SimulationControls
+                intensity={simulationIntensity}
+                onIntensityChange={setSimulationIntensity}
+                active={simulationActive}
+                onToggle={() => setSimulationActive(!simulationActive)}
+              />
+            </motion.div>
           </div>
 
           {/* Hint text */}
-          {!selectedCity && (
+          {!selectedCity && !scrolled && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
