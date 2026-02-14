@@ -39,17 +39,17 @@ export default function AIInsightPanel({ city, onClose }: AIInsightPanelProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="glass-panel p-6 w-full max-w-md"
+      className="glass-panel p-4 md:p-6 w-full max-w-md"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
           </div>
           <div>
-            <h3 className="font-display font-semibold text-foreground">AI Insights</h3>
-            <p className="text-xs text-muted-foreground">{city.name}</p>
+            <h3 className="font-display font-semibold text-foreground text-sm md:text-base">AI Insights</h3>
+            <p className="text-[10px] md:text-xs text-muted-foreground">{city.name}</p>
           </div>
         </div>
         <button
@@ -61,11 +61,11 @@ export default function AIInsightPanel({ city, onClose }: AIInsightPanelProps) {
       </div>
 
       {/* Current Status */}
-      <div className="flex items-center gap-3 mb-4 p-3 rounded-xl bg-secondary/50">
-        <div className="text-2xl font-display font-bold text-primary">{city.aqi}</div>
+      <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 rounded-xl bg-secondary/50">
+        <div className="text-xl md:text-2xl font-display font-bold text-primary">{city.aqi}</div>
         <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">Current AQI</p>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <p className="text-xs md:text-sm font-medium text-foreground">Current AQI</p>
+          <div className="flex items-center gap-1 text-[10px] md:text-xs text-muted-foreground">
             {trendIcon}
             <span>{city.trend === "up" ? "Rising" : city.trend === "down" ? "Declining" : "Stable"}</span>
           </div>

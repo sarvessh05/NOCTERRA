@@ -138,7 +138,7 @@ export default function Index() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: scrolled ? 0 : 1, y: scrolled ? -20 : 0 }}
             transition={{ delay: 0.5 }}
-            className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-none"
+            className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 pointer-events-none"
           >
             <div className="flex items-center gap-2 pointer-events-auto">
               <div className="w-2 h-2 rounded-full bg-primary animate-glow-pulse" />
@@ -197,7 +197,7 @@ export default function Index() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 onSubmit={handleSearch}
-                className="fixed top-16 left-1/2 -translate-x-1/2 z-30 w-80"
+                className="fixed top-14 md:top-16 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-2rem)] max-w-80"
               >
                 <input
                   type="text"
@@ -211,14 +211,14 @@ export default function Index() {
             )}
           </AnimatePresence>
 
-          {/* Panels Container - Horizontal Layout */}
+          {/* Panels Container - Responsive Layout */}
           <AnimatePresence>
             {selectedCity && !scrolled && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed top-20 right-6 z-20 flex gap-4 pointer-events-none"
+                className="fixed top-20 right-4 md:right-6 z-20 flex flex-col md:flex-row gap-4 pointer-events-none max-w-[calc(100vw-2rem)] md:max-w-none"
               >
                 {/* AI Forecast Panel - Left */}
                 <motion.div
@@ -229,7 +229,7 @@ export default function Index() {
                   }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                  className="pointer-events-auto w-[400px]"
+                  className="pointer-events-auto w-full md:w-[400px] max-w-[calc(100vw-2rem)]"
                 >
                   <AIForecastPanel city={selectedCity} />
                 </motion.div>
@@ -243,7 +243,7 @@ export default function Index() {
                   }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                  className="pointer-events-auto w-[400px]"
+                  className="pointer-events-auto w-full md:w-[400px] max-w-[calc(100vw-2rem)]"
                 >
                   <PredictionPanel
                     city={selectedCity}
@@ -261,7 +261,7 @@ export default function Index() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 100 }}
                       transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                      className="pointer-events-auto w-[400px]"
+                      className="pointer-events-auto w-full md:w-[400px] max-w-[calc(100vw-2rem)]"
                     >
                       <AIInsightPanel
                         city={selectedCity}
@@ -275,7 +275,7 @@ export default function Index() {
           </AnimatePresence>
 
           {/* Simulation Controls - bottom left */}
-          <div className="fixed bottom-6 left-6 z-20 pointer-events-none">
+          <div className="fixed bottom-4 left-4 md:bottom-6 md:left-6 z-20 pointer-events-none">
             <motion.div
               animate={{ opacity: scrolled ? 0 : 1 }}
               className="pointer-events-auto"

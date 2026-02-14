@@ -41,13 +41,13 @@ export default function CityComparison({ initialCity, onClose }: CityComparisonP
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="glass-panel p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+        className="glass-panel p-4 md:p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
-            <h2 className="font-display text-2xl font-bold text-foreground">City Comparison</h2>
-            <p className="text-sm text-muted-foreground">Compare air quality between cities</p>
+            <h2 className="font-display text-xl md:text-2xl font-bold text-foreground">City Comparison</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">Compare air quality between cities</p>
           </div>
           <button
             onClick={onClose}
@@ -58,7 +58,7 @@ export default function CityComparison({ initialCity, onClose }: CityComparisonP
         </div>
 
         {/* Split Screen Comparison */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
           {/* City 1 */}
           <CityCard city={city1} label="City 1" />
 
@@ -66,11 +66,11 @@ export default function CityComparison({ initialCity, onClose }: CityComparisonP
           {city2 ? (
             <CityCard city={city2} label="City 2" onRemove={() => setCity2(null)} />
           ) : (
-            <div className="p-6 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center min-h-[300px]">
+            <div className="p-4 md:p-6 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center min-h-[250px] md:min-h-[300px]">
               {showSearch ? (
                 <>
-                  <Search className="w-12 h-12 text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground mb-4">Select a city to compare</p>
+                  <Search className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground mb-3 md:mb-4" />
+                  <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">Select a city to compare</p>
                   
                   <input
                     type="text"
@@ -107,19 +107,19 @@ export default function CityComparison({ initialCity, onClose }: CityComparisonP
             className="space-y-4"
           >
             {/* AQI Difference */}
-            <div className="p-4 rounded-xl bg-secondary/30 border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-muted-foreground">AQI Difference</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold" style={{ color: aqiDiff > 0 ? "hsl(0, 84%, 55%)" : "hsl(142, 76%, 36%)" }}>
+            <div className="p-3 md:p-4 rounded-xl bg-secondary/30 border border-border">
+              <div className="flex items-center justify-between mb-2 md:mb-3">
+                <span className="text-xs md:text-sm text-muted-foreground">AQI Difference</span>
+                <div className="flex items-center gap-1 md:gap-2">
+                  <span className="text-xl md:text-2xl font-bold" style={{ color: aqiDiff > 0 ? "hsl(0, 84%, 55%)" : "hsl(142, 76%, 36%)" }}>
                     {aqiDiff > 0 ? "+" : ""}{aqiDiff}
                   </span>
-                  <span className="text-sm text-muted-foreground">({percentDiff > 0 ? "+" : ""}{percentDiff}%)</span>
+                  <span className="text-xs md:text-sm text-muted-foreground">({percentDiff > 0 ? "+" : ""}{percentDiff}%)</span>
                 </div>
               </div>
               
               {/* Visual Bar Comparison */}
-              <div className="relative h-12 rounded-xl bg-secondary overflow-hidden">
+              <div className="relative h-10 md:h-12 rounded-xl bg-secondary overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(city1.aqi / Math.max(city1.aqi, city2.aqi)) * 100}%` }}
@@ -143,39 +143,39 @@ export default function CityComparison({ initialCity, onClose }: CityComparisonP
             </div>
 
             {/* Winner Badge */}
-            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Better Air Quality</p>
-              <p className="text-xl font-bold text-primary">
+            <div className="p-3 md:p-4 rounded-xl bg-primary/10 border border-primary/20 text-center">
+              <p className="text-xs md:text-sm text-muted-foreground mb-1">Better Air Quality</p>
+              <p className="text-lg md:text-xl font-bold text-primary">
                 {city1.aqi < city2.aqi ? city1.name : city2.name}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
                 {Math.abs(percentDiff)}% cleaner air
               </p>
             </div>
 
             {/* Side by Side Stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-secondary/30 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Population</p>
-                <p className="text-sm font-semibold text-foreground">{city1.population}</p>
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
+              <div className="p-2 md:p-3 rounded-xl bg-secondary/30 text-center">
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-1">Population</p>
+                <p className="text-xs md:text-sm font-semibold text-foreground">{city1.population}</p>
                 <ArrowRight className="w-3 h-3 mx-auto my-1 text-muted-foreground" />
-                <p className="text-sm font-semibold text-foreground">{city2.population}</p>
+                <p className="text-xs md:text-sm font-semibold text-foreground">{city2.population}</p>
               </div>
               
-              <div className="p-3 rounded-xl bg-secondary/30 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Trend</p>
-                <p className="text-sm font-semibold text-foreground capitalize">{city1.trend}</p>
+              <div className="p-2 md:p-3 rounded-xl bg-secondary/30 text-center">
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-1">Trend</p>
+                <p className="text-xs md:text-sm font-semibold text-foreground capitalize">{city1.trend}</p>
                 <ArrowRight className="w-3 h-3 mx-auto my-1 text-muted-foreground" />
-                <p className="text-sm font-semibold text-foreground capitalize">{city2.trend}</p>
+                <p className="text-xs md:text-sm font-semibold text-foreground capitalize">{city2.trend}</p>
               </div>
               
-              <div className="p-3 rounded-xl bg-secondary/30 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Category</p>
-                <p className="text-xs font-semibold" style={{ color: getAqiColor(city1.aqi) }}>
+              <div className="p-2 md:p-3 rounded-xl bg-secondary/30 text-center">
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-1">Category</p>
+                <p className="text-[10px] md:text-xs font-semibold" style={{ color: getAqiColor(city1.aqi) }}>
                   {getAqiLabel(city1.aqi)}
                 </p>
                 <ArrowRight className="w-3 h-3 mx-auto my-1 text-muted-foreground" />
-                <p className="text-xs font-semibold" style={{ color: getAqiColor(city2.aqi) }}>
+                <p className="text-[10px] md:text-xs font-semibold" style={{ color: getAqiColor(city2.aqi) }}>
                   {getAqiLabel(city2.aqi)}
                 </p>
               </div>
@@ -192,24 +192,24 @@ function CityCard({ city, label, onRemove }: { city: CityData; label: string; on
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="p-6 rounded-2xl border border-border bg-secondary/20 relative"
+      className="p-4 md:p-6 rounded-2xl border border-border bg-secondary/20 relative"
     >
       {onRemove && (
         <button
           onClick={onRemove}
-          className="absolute top-3 right-3 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          className="absolute top-2 right-2 md:top-3 md:right-3 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
       )}
       
-      <p className="text-xs text-muted-foreground mb-2">{label}</p>
-      <h3 className="font-display text-xl font-bold text-foreground mb-1">{city.name}</h3>
-      <p className="text-sm text-muted-foreground mb-4">{city.country} · {city.population}</p>
+      <p className="text-[10px] md:text-xs text-muted-foreground mb-2">{label}</p>
+      <h3 className="font-display text-lg md:text-xl font-bold text-foreground mb-1">{city.name}</h3>
+      <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">{city.country} · {city.population}</p>
       
       {/* AQI Circle */}
-      <div className="flex items-center justify-center mb-4">
-        <div className="relative w-32 h-32">
+      <div className="flex items-center justify-center mb-3 md:mb-4">
+        <div className="relative w-24 h-24 md:w-32 md:h-32">
           <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             <circle
               cx="50"
@@ -234,19 +234,19 @@ function CityCard({ city, label, onRemove }: { city: CityData; label: string; on
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-display font-bold" style={{ color: getAqiColor(city.aqi) }}>
+            <span className="text-2xl md:text-3xl font-display font-bold" style={{ color: getAqiColor(city.aqi) }}>
               {city.aqi}
             </span>
-            <span className="text-xs text-muted-foreground">AQI</span>
+            <span className="text-[10px] md:text-xs text-muted-foreground">AQI</span>
           </div>
         </div>
       </div>
       
       <div className="text-center">
-        <p className="text-sm font-semibold mb-1" style={{ color: getAqiColor(city.aqi) }}>
+        <p className="text-xs md:text-sm font-semibold mb-1" style={{ color: getAqiColor(city.aqi) }}>
           {getAqiLabel(city.aqi)}
         </p>
-        <p className="text-xs text-muted-foreground capitalize">{city.trend} trend</p>
+        <p className="text-[10px] md:text-xs text-muted-foreground capitalize">{city.trend} trend</p>
       </div>
     </motion.div>
   );

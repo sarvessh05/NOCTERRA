@@ -52,15 +52,15 @@ export default function PredictionPanel({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 60 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="glass-panel p-6 w-[360px] max-h-[85vh] overflow-y-auto"
+      className="glass-panel p-4 md:p-6 w-full max-h-[85vh] overflow-y-auto"
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-4 md:mb-6">
         <div>
-          <h2 className="font-display text-xl font-bold text-foreground">
+          <h2 className="font-display text-lg md:text-xl font-bold text-foreground">
             {city.name}
           </h2>
-          <p className="text-sm text-muted-foreground">{city.country} · {city.population}</p>
+          <p className="text-xs md:text-sm text-muted-foreground">{city.country} · {city.population}</p>
         </div>
         <button
           onClick={onClose}
@@ -71,8 +71,8 @@ export default function PredictionPanel({
       </div>
 
       {/* AQI Display */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative w-24 h-24">
+      <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6">
+        <div className="relative w-20 h-20 md:w-24 md:h-24">
           <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             <circle
               cx="50" cy="50" r="40"
@@ -94,7 +94,7 @@ export default function PredictionPanel({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <motion.span
-              className="text-2xl font-display font-bold"
+              className="text-xl md:text-2xl font-display font-bold"
               style={{ color: getAqiColor(city.aqi) }}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -102,14 +102,14 @@ export default function PredictionPanel({
             >
               {city.aqi}
             </motion.span>
-            <span className="text-[10px] text-muted-foreground">AQI</span>
+            <span className="text-[9px] md:text-[10px] text-muted-foreground">AQI</span>
           </div>
         </div>
         <div>
-          <p className="text-sm font-medium" style={{ color: getAqiColor(city.aqi) }}>
+          <p className="text-xs md:text-sm font-medium" style={{ color: getAqiColor(city.aqi) }}>
             {getAqiLabel(city.aqi)}
           </p>
-          <div className="flex items-center gap-1 mt-1 text-muted-foreground text-xs">
+          <div className="flex items-center gap-1 mt-1 text-muted-foreground text-[10px] md:text-xs">
             {trendIcon}
             <span>
               {city.trend === "up" ? "Rising" : city.trend === "down" ? "Declining" : "Stable"}
@@ -119,10 +119,10 @@ export default function PredictionPanel({
       </div>
 
       {/* Future Mode Toggle */}
-      <div className="flex items-center justify-between mb-4 p-3 rounded-xl bg-secondary/50">
+      <div className="flex items-center justify-between mb-3 md:mb-4 p-2.5 md:p-3 rounded-xl bg-secondary/50">
         <div>
-          <p className="text-sm font-medium text-foreground">🔥 Future Mode</p>
-          <p className="text-[11px] text-muted-foreground">Show projected AQI</p>
+          <p className="text-xs md:text-sm font-medium text-foreground">🔥 Future Mode</p>
+          <p className="text-[10px] md:text-[11px] text-muted-foreground">Show projected AQI</p>
         </div>
         <button
           onClick={onToggleFuture}
@@ -139,9 +139,9 @@ export default function PredictionPanel({
       </div>
 
       {/* Chart */}
-      <div className="mb-4">
-        <p className="text-xs text-muted-foreground mb-2">7-Day Forecast</p>
-        <div className="h-32">
+      <div className="mb-3 md:mb-4">
+        <p className="text-[10px] md:text-xs text-muted-foreground mb-2">7-Day Forecast</p>
+        <div className="h-28 md:h-32">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <defs>

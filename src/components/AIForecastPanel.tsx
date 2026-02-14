@@ -48,16 +48,16 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
   const trend = forecast.length > 0 && forecast[forecast.length - 1].aqi > city.aqi ? "up" : "down";
 
   return (
-    <div className="glass-panel p-6 w-full">
+    <div className="glass-panel p-4 md:p-6 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-primary" />
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+            <Zap className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
           </div>
           <div>
-            <h3 className="font-display font-semibold text-foreground">72-Hour AI Forecast</h3>
-            <p className="text-xs text-muted-foreground">Powered by Gemini AI</p>
+            <h3 className="font-display font-semibold text-foreground text-sm md:text-base">72-Hour AI Forecast</h3>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Powered by Gemini AI</p>
           </div>
         </div>
         
@@ -66,11 +66,11 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30"
+            className="px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-primary/20 border border-primary/30"
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 md:gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-semibold text-primary">AI Confidence: {avgConfidence}%</span>
+              <span className="text-[10px] md:text-xs font-semibold text-primary">AI: {avgConfidence}%</span>
             </div>
           </motion.div>
         )}
@@ -84,29 +84,29 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
       ) : forecast.length > 0 ? (
         <>
           {/* Summary Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="p-3 rounded-xl bg-secondary/30 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Current</p>
-              <p className="text-lg font-bold" style={{ color: getAqiColor(city.aqi) }}>
+          <div className="grid grid-cols-3 gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="p-2 md:p-3 rounded-xl bg-secondary/30 text-center">
+              <p className="text-[10px] md:text-xs text-muted-foreground mb-1">Current</p>
+              <p className="text-base md:text-lg font-bold" style={{ color: getAqiColor(city.aqi) }}>
                 {city.aqi}
               </p>
             </div>
-            <div className="p-3 rounded-xl bg-secondary/30 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Peak</p>
-              <p className="text-lg font-bold" style={{ color: getAqiColor(maxAqi) }}>
+            <div className="p-2 md:p-3 rounded-xl bg-secondary/30 text-center">
+              <p className="text-[10px] md:text-xs text-muted-foreground mb-1">Peak</p>
+              <p className="text-base md:text-lg font-bold" style={{ color: getAqiColor(maxAqi) }}>
                 {maxAqi}
               </p>
             </div>
-            <div className="p-3 rounded-xl bg-secondary/30 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Low</p>
-              <p className="text-lg font-bold" style={{ color: getAqiColor(minAqi) }}>
+            <div className="p-2 md:p-3 rounded-xl bg-secondary/30 text-center">
+              <p className="text-[10px] md:text-xs text-muted-foreground mb-1">Low</p>
+              <p className="text-base md:text-lg font-bold" style={{ color: getAqiColor(minAqi) }}>
                 {minAqi}
               </p>
             </div>
           </div>
 
           {/* Chart */}
-          <div className="h-48 mb-4">
+          <div className="h-40 md:h-48 mb-3 md:mb-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>

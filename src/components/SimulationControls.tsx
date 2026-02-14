@@ -19,7 +19,7 @@ export default function SimulationControls({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="glass-panel p-5 w-[300px]"
+      className="glass-panel p-4 md:p-5 w-full max-w-[300px]"
     >
       <div className="flex items-center gap-2 mb-4">
         <AlertTriangle className="w-4 h-4 text-aqi-unhealthy" />

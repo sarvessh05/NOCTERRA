@@ -84,12 +84,12 @@ export default function HealthCards({ city }: HealthCardsProps) {
     : defaultCards;
 
   return (
-    <section className="relative z-10 px-6 py-20 max-w-5xl mx-auto">
+    <section className="relative z-10 px-4 md:px-6 py-12 md:py-20 max-w-5xl mx-auto">
       <motion.h2
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="font-display text-3xl font-bold text-center mb-4 text-foreground glow-text"
+        className="font-display text-2xl md:text-3xl font-bold text-center mb-3 md:mb-4 text-foreground glow-text"
       >
         Health Impact {city && `- ${city.name}`}
       </motion.h2>
@@ -98,7 +98,7 @@ export default function HealthCards({ city }: HealthCardsProps) {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center text-sm text-muted-foreground mb-8"
+          className="text-center text-xs md:text-sm text-muted-foreground mb-6 md:mb-8"
         >
           AI-powered health analysis for current air quality
         </motion.p>
@@ -110,7 +110,7 @@ export default function HealthCards({ city }: HealthCardsProps) {
           <p className="text-sm text-muted-foreground">Analyzing health impact...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {cards.map((card, i) => (
             <motion.div
               key={card.title}
@@ -119,20 +119,20 @@ export default function HealthCards({ city }: HealthCardsProps) {
               viewport={{ once: true }}
               transition={{ delay: i * 0.15, duration: 0.5 }}
               whileHover={{ scale: 1.03, rotateY: 3, rotateX: -3 }}
-              className="glass-panel p-6 cursor-default group"
+              className="glass-panel p-5 md:p-6 cursor-default group"
               style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
             >
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
+                className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-3 md:mb-4 transition-all duration-300 group-hover:scale-110"
                 style={{ backgroundColor: `${card.color}20` }}
               >
-                <card.icon className="w-6 h-6" style={{ color: card.color }} />
+                <card.icon className="w-5 h-5 md:w-6 md:h-6" style={{ color: card.color }} />
               </div>
-              <h3 className="font-display font-semibold text-foreground mb-1">{card.title}</h3>
-              <p className="text-lg font-bold mb-2" style={{ color: card.color }}>
+              <h3 className="font-display font-semibold text-foreground mb-1 text-sm md:text-base">{card.title}</h3>
+              <p className="text-base md:text-lg font-bold mb-2" style={{ color: card.color }}>
                 {card.value}
               </p>
-              <p className="text-sm text-muted-foreground">{card.description}</p>
+              <p className="text-xs md:text-sm text-muted-foreground">{card.description}</p>
 
               {/* Glow pulse on hover */}
               <div
