@@ -2,6 +2,77 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-2.0-flash-001'; // Updated to latest model
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
+// Rate limiting configuration
+const RATE_LIMIT = {
+  maxRequests: 15, // Max requests per minute
+  windowMs: 60000, // 1 minute window
+  requests: [] as number[],
+};
+
+// Cache for API responses
+const responseCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function checkRateLimit(): boolean {
+  const now = Date.now();
+  // Remove requests older than the window
+  RATE_LIMIT.requests = RATE_LIMIT.requests.filter(
+    (timestamp) => now - timestamp < RATE_LIMIT.windowMs
+  );
+  
+  if (RATE_LIMIT.requests.length >= RATE_LIMIT.maxRequests) {
+    return false; // Rate limit exceeded
+  }
+  
+  RATE_LIMIT.requests.push(now);
+  return true;
+}
+
+function getCachedResponse<T>(key: string): T | null {
+  const cached = responseCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data as T;
+  }
+  responseCache.delete(key);
+  return null;
+}
+
+function setCachedResponse(key: string, data: any): void {
+  responseCache.set(key, { data, timestamp: Date.now() });
+}
+
+async function makeGeminiRequest(prompt: string, config: any): Promise<any> {
+  // Check rate limit
+  if (!checkRateLimit()) {
+    throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
+  }
+
+  const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }],
+      generationConfig: config
+    })
+  });
+
+  if (response.status === 429) {
+    throw new Error('API rate limit exceeded. Using cached data or fallback.');
+  }
+
+  if (!response.ok) {
+    throw new Error(`API request failed with status ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export interface AirQualityInsight {
   explanation: string;
   healthAdvice: string;
@@ -32,6 +103,14 @@ export async function getAirQualityInsight(
   aqi: number,
   trend: 'up' | 'down' | 'stable'
 ): Promise<AirQualityInsight> {
+  // Check cache first
+  const cacheKey = `insight-${cityName}-${aqi}-${trend}`;
+  const cached = getCachedResponse<AirQualityInsight>(cacheKey);
+  if (cached) {
+    console.log('Using cached insight for', cityName);
+    return cached;
+  }
+
   const prompt = `You are an air quality expert analyzing ${cityName} specifically.
 
 Current Data:
@@ -64,29 +143,11 @@ Provide a detailed, city-specific analysis in JSON format:
 Return ONLY valid JSON with these exact fields. Be conversational and specific to ${cityName}.`;
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.9,
-          maxOutputTokens: 800,
-        }
-      })
+    const data = await makeGeminiRequest(prompt, {
+      temperature: 0.9,
+      maxOutputTokens: 800,
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to get AI insight');
-    }
-
-    const data = await response.json();
     const text = data.candidates[0].content.parts[0].text;
     
     // Extract JSON from response (handle markdown code blocks)
@@ -96,11 +157,15 @@ Return ONLY valid JSON with these exact fields. Be conversational and specific t
     }
     
     const insight = JSON.parse(jsonMatch[0]);
+    
+    // Cache the response
+    setCachedResponse(cacheKey, insight);
+    
     return insight;
   } catch (error) {
     console.error('Gemini API error:', error);
-    // Fallback response - city-specific
-    return {
+    // Return fallback response
+    const fallback = {
       explanation: `${cityName} currently has an AQI of ${aqi}, which indicates ${aqi > 150 ? 'unhealthy' : aqi > 100 ? 'moderate' : 'good'} air quality. This is influenced by local emissions, weather patterns, and seasonal factors specific to the region.`,
       healthAdvice: aqi > 150 
         ? `Residents of ${cityName} should limit outdoor activities, especially sensitive groups. Keep windows closed and use air purifiers indoors.`
@@ -114,6 +179,10 @@ Return ONLY valid JSON with these exact fields. Be conversational and specific t
         : `Air quality in ${cityName} should remain relatively stable.`,
       confidence: 75
     };
+    
+    // Cache fallback too
+    setCachedResponse(cacheKey, fallback);
+    return fallback;
   }
 }
 
@@ -122,6 +191,14 @@ export async function get72HourForecast(
   currentAqi: number,
   historicalData: number[]
 ): Promise<{ hour: number; aqi: number; confidence: number }[]> {
+  // Check cache first
+  const cacheKey = `forecast-${cityName}-${currentAqi}`;
+  const cached = getCachedResponse<{ hour: number; aqi: number; confidence: number }[]>(cacheKey);
+  if (cached) {
+    console.log('Using cached forecast for', cityName);
+    return cached;
+  }
+
   const prompt = `As an air quality forecaster, predict the next 72 hours of AQI for ${cityName}.
 Current AQI: ${currentAqi}
 Recent 7-day data: ${historicalData.join(', ')}
@@ -136,29 +213,11 @@ Include 72 entries. Confidence should vary (70-95) based on prediction distance.
 Return ONLY valid JSON array, no markdown.`;
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 2000,
-        }
-      })
+    const data = await makeGeminiRequest(prompt, {
+      temperature: 0.8,
+      maxOutputTokens: 2000,
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to get forecast');
-    }
-
-    const data = await response.json();
     const text = data.candidates[0].content.parts[0].text;
     
     const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -167,11 +226,18 @@ Return ONLY valid JSON array, no markdown.`;
     }
     
     const forecast = JSON.parse(jsonMatch[0]);
-    return forecast.slice(0, 72); // Ensure exactly 72 hours
+    const result = forecast.slice(0, 72); // Ensure exactly 72 hours
+    
+    // Cache the response
+    setCachedResponse(cacheKey, result);
+    
+    return result;
   } catch (error) {
     console.error('Forecast API error:', error);
     // Fallback: Generate rule-based forecast
-    return generateRuleBasedForecast(currentAqi, historicalData);
+    const fallback = generateRuleBasedForecast(currentAqi, historicalData);
+    setCachedResponse(cacheKey, fallback);
+    return fallback;
   }
 }
 
@@ -221,6 +287,14 @@ export async function getHealthImpact(
   cityName: string,
   aqi: number
 ): Promise<HealthImpactData> {
+  // Check cache first
+  const cacheKey = `health-${cityName}-${aqi}`;
+  const cached = getCachedResponse<HealthImpactData>(cacheKey);
+  if (cached) {
+    console.log('Using cached health data for', cityName);
+    return cached;
+  }
+
   const prompt = `You are a health expert analyzing air quality impact for ${cityName}.
 
 Current AQI: ${aqi}
@@ -256,29 +330,11 @@ Be specific to ${cityName}. Use these color guidelines:
 Return ONLY valid JSON.`;
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 600,
-        }
-      })
+    const data = await makeGeminiRequest(prompt, {
+      temperature: 0.8,
+      maxOutputTokens: 600,
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to get health impact');
-    }
-
-    const data = await response.json();
     const text = data.candidates[0].content.parts[0].text;
     
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -287,47 +343,57 @@ Return ONLY valid JSON.`;
     }
     
     const healthData = JSON.parse(jsonMatch[0]);
+    
+    // Cache the response
+    setCachedResponse(cacheKey, healthData);
+    
     return healthData;
   } catch (error) {
     console.error('Health Impact API error:', error);
     // Fallback response
-    const getColorForAqi = (aqi: number) => {
-      if (aqi <= 50) return "hsl(142, 76%, 50%)";
-      if (aqi <= 100) return "hsl(45, 100%, 55%)";
-      if (aqi <= 150) return "hsl(25, 100%, 55%)";
-      if (aqi <= 200) return "hsl(0, 84%, 55%)";
-      if (aqi <= 300) return "hsl(280, 80%, 55%)";
-      return "hsl(320, 90%, 40%)";
-    };
-
-    return {
-      respiratoryRisk: {
-        level: aqi > 150 ? "High" : aqi > 100 ? "Moderate" : "Low",
-        description: aqi > 150 
-          ? `High respiratory risk in ${cityName}. Sensitive groups should stay indoors.`
-          : aqi > 100
-          ? `Moderate risk in ${cityName}. Sensitive individuals should limit prolonged outdoor exertion.`
-          : `Low respiratory risk in ${cityName}. Air quality is acceptable.`,
-        color: getColorForAqi(aqi)
-      },
-      visibility: {
-        value: aqi > 150 ? "< 5 km" : aqi > 100 ? "5-10 km" : "> 10 km",
-        description: aqi > 150
-          ? `Poor visibility in ${cityName} due to high particulate concentration.`
-          : aqi > 100
-          ? `Moderate visibility in ${cityName}. Some haze may be present.`
-          : `Good visibility in ${cityName}. Clear skies expected.`,
-        color: getColorForAqi(aqi)
-      },
-      outdoorActivity: {
-        level: aqi > 150 ? "Avoid" : aqi > 100 ? "Limited" : "Unrestricted",
-        description: aqi > 150
-          ? `Avoid outdoor activities in ${cityName}. Stay indoors with air purifiers.`
-          : aqi > 100
-          ? `Limit outdoor activities in ${cityName}. Morning hours are best for exercise.`
-          : `Unrestricted outdoor activities in ${cityName}. Enjoy the fresh air!`,
-        color: getColorForAqi(aqi)
-      }
-    };
+    const fallback = generateFallbackHealthData(cityName, aqi);
+    setCachedResponse(cacheKey, fallback);
+    return fallback;
   }
+}
+
+function generateFallbackHealthData(cityName: string, aqi: number): HealthImpactData {
+  const getColorForAqi = (aqi: number) => {
+    if (aqi <= 50) return "hsl(142, 76%, 50%)";
+    if (aqi <= 100) return "hsl(45, 100%, 55%)";
+    if (aqi <= 150) return "hsl(25, 100%, 55%)";
+    if (aqi <= 200) return "hsl(0, 84%, 55%)";
+    if (aqi <= 300) return "hsl(280, 80%, 55%)";
+    return "hsl(320, 90%, 40%)";
+  };
+
+  return {
+    respiratoryRisk: {
+      level: aqi > 150 ? "High" : aqi > 100 ? "Moderate" : "Low",
+      description: aqi > 150 
+        ? `High respiratory risk in ${cityName}. Sensitive groups should stay indoors.`
+        : aqi > 100
+        ? `Moderate risk in ${cityName}. Sensitive individuals should limit prolonged outdoor exertion.`
+        : `Low respiratory risk in ${cityName}. Air quality is acceptable.`,
+      color: getColorForAqi(aqi)
+    },
+    visibility: {
+      value: aqi > 150 ? "< 5 km" : aqi > 100 ? "5-10 km" : "> 10 km",
+      description: aqi > 150
+        ? `Poor visibility in ${cityName} due to high particulate concentration.`
+        : aqi > 100
+        ? `Moderate visibility in ${cityName}. Some haze may be present.`
+        : `Good visibility in ${cityName}. Clear skies expected.`,
+      color: getColorForAqi(aqi)
+    },
+    outdoorActivity: {
+      level: aqi > 150 ? "Avoid" : aqi > 100 ? "Limited" : "Unrestricted",
+      description: aqi > 150
+        ? `Avoid outdoor activities in ${cityName}. Stay indoors with air purifiers.`
+        : aqi > 100
+        ? `Limit outdoor activities in ${cityName}. Morning hours are best for exercise.`
+        : `Unrestricted outdoor activities in ${cityName}. Enjoy the fresh air!`,
+      color: getColorForAqi(aqi)
+    }
+  };
 }
