@@ -1,3 +1,6 @@
+// Use serverless function in production, direct API in development
+const USE_PROXY = import.meta.env.PROD || import.meta.env.VITE_USE_PROXY === 'true';
+const PROXY_URL = '/.netlify/functions/gemini-proxy';
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-2.0-flash-001';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -119,34 +122,67 @@ Return ONLY valid JSON, no markdown.`;
   try {
     console.log(`🔄 Making API call for: ${cityName}`);
     
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 3000,
-        }
-      })
-    });
+    let data;
+    
+    if (USE_PROXY) {
+      // Use serverless function (production)
+      console.log('Using serverless proxy');
+      const response = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          config: {
+            temperature: 0.8,
+            maxOutputTokens: 3000,
+          }
+        })
+      });
 
-    if (response.status === 429) {
-      console.warn('⚠️ Rate limit hit, using fallback data');
-      throw new Error('Rate limit exceeded');
+      if (response.status === 429) {
+        console.warn('⚠️ Rate limit hit, using fallback data');
+        throw new Error('Rate limit exceeded');
+      }
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      data = await response.json();
+    } else {
+      // Direct API call (development only)
+      console.log('Using direct API call (development)');
+      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: 3000,
+          }
+        })
+      });
+
+      if (response.status === 429) {
+        console.warn('⚠️ Rate limit hit, using fallback data');
+        throw new Error('Rate limit exceeded');
+      }
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      data = await response.json();
     }
-
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    const data = await response.json();
     const text = data.candidates[0].content.parts[0].text;
     
     const jsonMatch = text.match(/\{[\s\S]*\}/);
