@@ -27,7 +27,6 @@ const MAX_GROQ_FAILURES = 2; // Switch to Gemini after 2 failures
 function getCachedResponse<T>(key: string): T | null {
   const cached = responseCache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log(`✅ Using cached data for: ${key}`);
     return cached.data as T;
   }
   responseCache.delete(key);
@@ -43,10 +42,10 @@ export interface AirQualityInsight {
   healthAdvice: string;
   trend: string;
   confidence: number;
-  forecastConfidence?: number; // AI confidence for 72-hour forecast
+  forecastConfidence?: number;
   futureProjection?: {
-    percentIncrease: number; // Dynamic % for future mode
-    reason: string; // Why it will increase
+    percentIncrease: number;
+    reason: string;
   };
 }
 
@@ -68,7 +67,6 @@ export interface HealthImpactData {
   };
 }
 
-// Combined response interface - AI only generates insight and health, forecast is rule-based
 export interface CombinedAirQualityData {
   insight: AirQualityInsight;
   forecast: { hour: number; aqi: number; confidence: number }[];
@@ -84,7 +82,6 @@ function getColorForAqi(aqi: number): string {
   return "hsl(320, 90%, 40%)";
 }
 
-// Single unified API call - with request deduplication
 export async function getAllAirQualityData(
   cityName: string,
   aqi: number,
@@ -93,53 +90,40 @@ export async function getAllAirQualityData(
 ): Promise<CombinedAirQualityData> {
   const cacheKey = `combined-${cityName}-${aqi}`;
   
-  // 1️⃣ Check cache first
   const cached = getCachedResponse<CombinedAirQualityData>(cacheKey);
   if (cached) {
     return cached;
   }
 
-  // 2️⃣ Check if request already in flight (deduplication)
   if (pendingRequests.has(cacheKey)) {
-    console.log(`⏳ Waiting for existing request for ${cityName}...`);
     return pendingRequests.get(cacheKey)!;
   }
 
-  // 3️⃣ Create new request promise
   const requestPromise = (async () => {
     try {
-      // Generate forecast using rule-based algorithm (no AI needed - more reliable)
       const forecast = generateRuleBasedForecast(aqi, historicalData);
       
-      // Check if AI is enabled
       if (!AI_ENABLED) {
-        console.log('⚠️ AI disabled, using fallback data');
         const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
         setCachedResponse(cacheKey, fallback);
         return fallback;
       }
 
-      // Try AI for insight and health impact
       try {
         let aiResult;
         
-        // Try Groq first (now primary)
         if (groqFailures < MAX_GROQ_FAILURES && GROQ_API_KEY) {
           try {
-            console.log('� Trying Groq AI (Primary)...');
             aiResult = await makeGroqRequest(cityName, aqi, trend);
-            groqFailures = 0; // Reset on success
-            console.log('✅ Groq AI succeeded');
+            groqFailures = 0;
           } catch (groqError) {
             groqFailures++;
-            console.warn(`⚠️ Groq failed (${groqFailures}/${MAX_GROQ_FAILURES}):`, groqError);
-            throw groqError; // Let it fall through to Gemini
+            throw groqError;
           }
         } else {
           throw new Error('Groq unavailable, trying Gemini');
         }
         
-        // If we got here, Groq succeeded
         const result: CombinedAirQualityData = {
           insight: aiResult.insight,
           healthImpact: aiResult.healthImpact,
@@ -150,12 +134,9 @@ export async function getAllAirQualityData(
         return result;
         
       } catch (primaryError) {
-        // Groq failed, try Gemini as fallback
         if (GEMINI_API_KEY) {
           try {
-            console.log('� Trying Gemini AI as fallback...');
             const geminiResult = await makeGeminiRequest(cityName, aqi, trend);
-            console.log('✅ Gemini AI succeeded');
             
             const result: CombinedAirQualityData = {
               insight: geminiResult.insight,
@@ -166,24 +147,19 @@ export async function getAllAirQualityData(
             setCachedResponse(cacheKey, result);
             return result;
           } catch (geminiError) {
-            console.warn('⚠️ Gemini also failed:', geminiError);
             // Fall through to static fallback
           }
         }
         
-        // Both AI providers failed, use static fallback
-        console.log('⚠️ All AI providers failed, using static fallback');
         const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
         setCachedResponse(cacheKey, fallback);
         return fallback;
       }
     } finally {
-      // Always clean up pending request
       pendingRequests.delete(cacheKey);
     }
   })();
 
-  // Store the promise for deduplication
   pendingRequests.set(cacheKey, requestPromise);
   return requestPromise;
 }
@@ -207,7 +183,12 @@ Return ONLY this JSON structure:
     "explanation": "Why does ${cityName} have an AQI of ${aqi}? (2-3 sentences, city-specific)",
     "healthAdvice": "Practical recommendations for ${cityName} residents today",
     "trend": "What to expect in next 24-48 hours for ${cityName}",
-    "confidence": 85
+    "confidence": 85,
+    "forecastConfidence": 82,
+    "futureProjection": {
+      "percentIncrease": 15,
+      "reason": "Expected increase due to [specific factors for ${cityName}]"
+    }
   },
   "healthImpact": {
     "respiratoryRisk": {
@@ -228,7 +209,13 @@ Return ONLY this JSON structure:
   }
 }
 
-Return ONLY valid JSON, no markdown.`;
+IMPORTANT:
+- confidence: Your confidence in current analysis (70-95)
+- forecastConfidence: Your confidence in 72-hour forecast (65-90)
+- percentIncrease: Realistic % increase for future scenario (5-25)
+- Make values vary based on city conditions, not constant
+- Be specific to ${cityName}'s geography, climate, and pollution sources
+- Return ONLY valid JSON, no markdown.`;
   
   let data;
   
@@ -351,7 +338,6 @@ IMPORTANT:
   const data = await response.json();
   const text = data.choices[0].message.content;
   
-  // Remove markdown code blocks if present
   const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid response format');
@@ -365,21 +351,19 @@ function generateFallbackData(
   trend: 'up' | 'down' | 'stable',
   historicalData: number[]
 ): CombinedAirQualityData {
-  // Generate dynamic values based on AQI and trend
   const baseConfidence = 75;
-  const confidenceVariation = Math.floor(Math.random() * 10) - 5; // -5 to +5
+  const confidenceVariation = Math.floor(Math.random() * 10) - 5;
   const confidence = Math.max(70, Math.min(90, baseConfidence + confidenceVariation));
   
   const forecastConfidence = Math.max(65, confidence - 8);
   
-  // Dynamic future projection based on trend and AQI
   let percentIncrease = 12;
   if (trend === 'up') {
-    percentIncrease = 15 + Math.floor(Math.random() * 8); // 15-22%
+    percentIncrease = 15 + Math.floor(Math.random() * 8);
   } else if (trend === 'down') {
-    percentIncrease = 5 + Math.floor(Math.random() * 5); // 5-9%
+    percentIncrease = 5 + Math.floor(Math.random() * 5);
   } else {
-    percentIncrease = 10 + Math.floor(Math.random() * 6); // 10-15%
+    percentIncrease = 10 + Math.floor(Math.random() * 6);
   }
   
   return {
@@ -423,24 +407,19 @@ function generateRuleBasedForecast(
   for (let hour = 1; hour <= 72; hour++) {
     const hourOfDay = (new Date().getHours() + hour) % 24;
     
-    // Traffic patterns
     const trafficFactor = (hourOfDay >= 7 && hourOfDay <= 9) || (hourOfDay >= 17 && hourOfDay <= 19) 
       ? 1.15 
       : hourOfDay >= 22 || hourOfDay <= 5 
       ? 0.85 
       : 1.0;
     
-    // Random variation
     const randomFactor = 0.95 + Math.random() * 0.1;
-    
-    // Trend continuation
     const trendFactor = 1 + (avgChange * hour / 100);
     
     const predictedAqi = Math.round(
       currentAqi * trafficFactor * randomFactor * trendFactor
     );
     
-    // Confidence decreases with time
     const confidence = Math.max(70, 95 - Math.floor(hour / 3));
     
     forecast.push({
@@ -485,7 +464,6 @@ function generateFallbackHealthData(cityName: string, aqi: number): HealthImpact
   };
 }
 
-// Legacy functions for backward compatibility (they now use the combined call)
 export async function getAirQualityInsight(
   cityName: string,
   aqi: number,

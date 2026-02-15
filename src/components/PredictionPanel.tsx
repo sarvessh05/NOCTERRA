@@ -142,7 +142,7 @@ export default function PredictionPanel({
       {/* Future Mode Toggle */}
       <div className="flex items-center justify-between mb-3 md:mb-4 p-2.5 md:p-3 rounded-xl bg-secondary/50">
         <div>
-          <p className="text-xs md:text-sm font-medium text-foreground">🔥 Future Mode</p>
+          <p className="text-xs md:text-sm font-medium text-foreground">Future Mode</p>
           <p className="text-[10px] md:text-[11px] text-muted-foreground">Show projected AQI</p>
         </div>
         <button
