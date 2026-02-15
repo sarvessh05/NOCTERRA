@@ -13,13 +13,20 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
   const [forecast, setForecast] = useState<{ hour: number; aqi: number; confidence: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [avgConfidence, setAvgConfidence] = useState(0);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
+  // Don't auto-load, wait for user interaction
   useEffect(() => {
-    loadForecast();
+    // Reset when city changes
+    setHasLoaded(false);
+    setForecast([]);
   }, [city.name]);
 
   const loadForecast = async () => {
+    if (hasLoaded) return; // Prevent duplicate loads
+    
     setLoading(true);
+    setHasLoaded(true);
     try {
       const result = await get72HourForecast(city.name, city.aqi, city.forecast);
       setForecast(result);
@@ -29,6 +36,8 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
       setAvgConfidence(Math.round(avg));
     } catch (error) {
       console.error("Failed to get forecast:", error);
+      // Set empty forecast on error so UI doesn't hang
+      setForecast([]);
     } finally {
       setLoading(false);
     }
@@ -176,7 +185,13 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
         </>
       ) : (
         <div className="text-center py-8">
-          <p className="text-sm text-muted-foreground">No forecast data available</p>
+          <button
+            onClick={loadForecast}
+            className="px-6 py-3 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary font-semibold transition-colors"
+          >
+            Generate 72-Hour Forecast
+          </button>
+          <p className="text-xs text-muted-foreground mt-2">Click to get AI-powered predictions</p>
         </div>
       )}
     </div>

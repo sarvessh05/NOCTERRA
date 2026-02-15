@@ -22,8 +22,8 @@ cp .env.example .env
 
 Edit `.env` and add your API keys:
 ```env
-VITE_GEMINI_API_KEY=AIzaSyCHcLP9zmmIW-n0J6GCbVMZFGp6s9-3ZW4
-VITE_OPENAQ_API_KEY=3d1313118da7ef818af58782905d1538ec272074
+VITE_GEMINI_API_KEY=Your_Gemini_API_Key
+VITE_OPENAQ_API_KEY=Your_OpenAQ_API_Key
 ```
 
 **Get API Keys:**
