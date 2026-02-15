@@ -5,12 +5,19 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-2.0-flash-001';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
+// Feature flag - disable AI if quota exhausted
+const AI_ENABLED = import.meta.env.VITE_AI_ENABLED !== 'false'; // Default true
+
 // Cache for API responses
 const responseCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 // Request deduplication - prevents parallel requests for same data
 const pendingRequests = new Map<string, Promise<any>>();
+
+// Track API failures to auto-disable
+let consecutiveFailures = 0;
+const MAX_FAILURES = 3;
 
 function getCachedResponse<T>(key: string): T | null {
   const cached = responseCache.get(key);
@@ -94,8 +101,60 @@ export async function getAllAirQualityData(
       // Generate forecast using rule-based algorithm (no AI needed - more reliable)
       const forecast = generateRuleBasedForecast(aqi, historicalData);
       
-      // Only use AI for insight and health impact (much smaller response = 80% token reduction)
-      const prompt = `You are an air quality expert analyzing ${cityName}. Provide analysis in ONE JSON response.
+      // Check if AI is enabled and not failing
+      if (!AI_ENABLED || consecutiveFailures >= MAX_FAILURES) {
+        console.log('⚠️ AI disabled or quota exhausted, using fallback data');
+        const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
+        setCachedResponse(cacheKey, fallback);
+        return fallback;
+      }
+
+      // Try AI for insight and health impact
+      try {
+        const aiResult = await makeAIRequest(cityName, aqi, trend);
+        
+        // Success - reset failure counter
+        consecutiveFailures = 0;
+        
+        // Combine AI results with rule-based forecast
+        const result: CombinedAirQualityData = {
+          insight: aiResult.insight,
+          healthImpact: aiResult.healthImpact,
+          forecast
+        };
+        
+        // Cache the response
+        setCachedResponse(cacheKey, result);
+        console.log(`✅ Cached AI data for: ${cityName}`);
+        
+        return result;
+      } catch (aiError) {
+        // AI failed - increment counter and use fallback
+        consecutiveFailures++;
+        console.warn(`⚠️ AI request failed (${consecutiveFailures}/${MAX_FAILURES}):`, aiError);
+        
+        const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
+        setCachedResponse(cacheKey, fallback);
+        return fallback;
+      }
+    } finally {
+      // Always clean up pending request
+      pendingRequests.delete(cacheKey);
+    }
+  })();
+
+  // Store the promise for deduplication
+  pendingRequests.set(cacheKey, requestPromise);
+  return requestPromise;
+}
+
+async function makeAIRequest(
+  cityName: string,
+  aqi: number,
+  trend: 'up' | 'down' | 'stable'
+): Promise<{ insight: AirQualityInsight; healthImpact: HealthImpactData }> {
+  // Only use AI for insight and health impact (much smaller response = 80% token reduction)
+  const prompt = `You are an air quality expert analyzing ${cityName}. Provide analysis in ONE JSON response.
 
 Current Data:
 - City: ${cityName}
@@ -132,105 +191,74 @@ Return ONLY this JSON structure:
 
 Return ONLY valid JSON, no markdown.`;
 
-      console.log(`🔄 Making API call for: ${cityName}`);
-      
-      let data;
-      
-      if (USE_PROXY) {
-        // Use serverless function (production)
-        console.log('Using serverless proxy');
-        const response = await fetch(PROXY_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt,
-            config: {
-              temperature: 0.8,
-              maxOutputTokens: 800, // Reduced from 3000 - much smaller response
-            }
-          })
-        });
-
-        if (response.status === 429) {
-          console.warn('⚠️ Rate limit hit, using fallback data');
-          throw new Error('Rate limit exceeded');
+  console.log(`🔄 Making AI request for: ${cityName}`);
+  
+  let data;
+  
+  if (USE_PROXY) {
+    // Use serverless function (production)
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        config: {
+          temperature: 0.8,
+          maxOutputTokens: 800,
         }
+      })
+    });
 
-        if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`);
-        }
-
-        data = await response.json();
-      } else {
-        // Direct API call (development only)
-        console.log('Using direct API call (development)');
-        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: prompt
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.8,
-              maxOutputTokens: 800, // Reduced from 3000
-            }
-          })
-        });
-
-        if (response.status === 429) {
-          console.warn('⚠️ Rate limit hit, using fallback data');
-          throw new Error('Rate limit exceeded');
-        }
-
-        if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`);
-        }
-
-        data = await response.json();
-      }
-
-      const text = data.candidates[0].content.parts[0].text;
-      
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Invalid response format');
-      }
-      
-      const aiResult = JSON.parse(jsonMatch[0]);
-      
-      // Combine AI results with rule-based forecast
-      const result: CombinedAirQualityData = {
-        insight: aiResult.insight,
-        healthImpact: aiResult.healthImpact,
-        forecast // Rule-based, not from AI
-      };
-      
-      // Cache the response
-      setCachedResponse(cacheKey, result);
-      console.log(`✅ Cached data for: ${cityName}`);
-      
-      return result;
-    } catch (error) {
-      console.error('❌ API error, using fallback:', error);
-      const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
-      setCachedResponse(cacheKey, fallback);
-      return fallback;
-    } finally {
-      // Always clean up pending request
-      pendingRequests.delete(cacheKey);
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded');
     }
-  })();
 
-  // Store the promise for deduplication
-  pendingRequests.set(cacheKey, requestPromise);
-  return requestPromise;
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    data = await response.json();
+  } else {
+    // Direct API call (development only)
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 800,
+        }
+      })
+    });
+
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded');
+    }
+
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    data = await response.json();
+  }
+
+  const text = data.candidates[0].content.parts[0].text;
+  
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Invalid response format');
+  }
+  
+  return JSON.parse(jsonMatch[0]);
 }
 
 function generateFallbackData(
