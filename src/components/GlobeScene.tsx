@@ -1,4 +1,4 @@
-import { useRef, useMemo, useCallback, useEffect } from "react";
+import { useRef, useMemo, useCallback, useEffect, useState } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls, Sphere, Stars } from "@react-three/drei";
 import * as THREE from "three";
@@ -21,9 +21,8 @@ function EarthWithMarkers({
   
   const nightMap = useLoader(THREE.TextureLoader, earthNightTexture);
   
-  // Get active cities for today and apply real-time AQI updates
   const staticCities = useMemo(() => getActiveCities(), []);
-  const cities = useRealtimeAQI(staticCities, 30000); // Update every 30 seconds
+  const cities = useRealtimeAQI(staticCities, 30000);
 
   useEffect(() => {
     if (nightMap) {
@@ -46,7 +45,6 @@ function EarthWithMarkers({
 
   return (
     <group ref={groupRef}>
-      {/* Main Earth sphere with emissive night lights */}
       <mesh ref={earthRef}>
         <sphereGeometry args={[2, 128, 128]} />
         <meshStandardMaterial
@@ -60,7 +58,6 @@ function EarthWithMarkers({
         />
       </mesh>
 
-      {/* Emissive glow layer - simulates bloom effect */}
       <mesh>
         <sphereGeometry args={[2.01, 128, 128]} />
         <meshBasicMaterial
@@ -72,7 +69,6 @@ function EarthWithMarkers({
         />
       </mesh>
 
-      {/* Cinematic atmosphere rim - subtle halo */}
       <Sphere args={[2.05, 64, 64]}>
         <meshBasicMaterial
           color="#4fa3ff"
@@ -83,7 +79,6 @@ function EarthWithMarkers({
         />
       </Sphere>
 
-      {/* Smog layer */}
       <Sphere args={[2.12, 32, 32]}>
         <meshBasicMaterial
           color={new THREE.Color(`hsl(${30 - simulationIntensity * 30}, 60%, 40%)`)}
@@ -94,7 +89,6 @@ function EarthWithMarkers({
         />
       </Sphere>
 
-      {/* Outer atmospheric glow */}
       <Sphere args={[2.3, 32, 32]}>
         <meshBasicMaterial
           color="#4fa3ff"
@@ -105,7 +99,6 @@ function EarthWithMarkers({
         />
       </Sphere>
 
-      {/* City markers - inside the group so they rotate with Earth */}
       {cities.map((city) => (
         <CityMarker
           key={city.name}
@@ -171,13 +164,11 @@ function CityMarker({
         <meshBasicMaterial color={color} transparent opacity={0.9} />
       </mesh>
 
-      {/* Glow */}
       <mesh scale={scale * 2}>
         <sphereGeometry args={[0.03, 16, 16]} />
         <meshBasicMaterial color={color} transparent opacity={0.2} />
       </mesh>
 
-      {/* Pulse ring */}
       {isSelected && (
         <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.05, 0.06, 32]} />
@@ -230,6 +221,143 @@ function FloatingParticles({ count = 200, simulationIntensity = 0 }: { count?: n
   );
 }
 
+function RareComet({ 
+  selectedCity, 
+  lastInteractionTime 
+}: { 
+  selectedCity: CityData | null;
+  lastInteractionTime: number;
+}) {
+  const cometRef = useRef<THREE.Group>(null);
+  const [isActive, setIsActive] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const lastCometTime = useRef(0);
+  const nextCheckTime = useRef(Date.now() + Math.random() * 15000 + 25000);
+  
+  const startPoint = useRef(new THREE.Vector3());
+  const endPoint = useRef(new THREE.Vector3());
+  const duration = useRef(1.0);
+
+  useFrame((state) => {
+    const now = Date.now();
+    const timeSinceInteraction = now - lastInteractionTime;
+    const timeSinceLastComet = now - lastCometTime.current;
+    
+    if (!isActive && now >= nextCheckTime.current) {
+      if (
+        !selectedCity &&
+        timeSinceInteraction > 10000 &&
+        timeSinceLastComet > 120000
+      ) {
+        const chance = Math.random();
+        if (chance < 0.015) {
+          const angle1 = Math.random() * Math.PI * 2;
+          const angle2 = angle1 + (Math.random() * 0.4 + 0.3) * (Math.random() > 0.5 ? 1 : -1);
+          const radius = 8;
+          const height = 3 + Math.random() * 2;
+          
+          startPoint.current.set(
+            Math.cos(angle1) * radius,
+            height,
+            Math.sin(angle1) * radius
+          );
+          
+          endPoint.current.set(
+            Math.cos(angle2) * radius,
+            height - (Math.random() * 1.5 + 0.5),
+            Math.sin(angle2) * radius
+          );
+          
+          duration.current = 0.9 + Math.random() * 0.4;
+          
+          setIsActive(true);
+          setProgress(0);
+          lastCometTime.current = now;
+        }
+      }
+      
+      nextCheckTime.current = now + Math.random() * 15000 + 25000;
+    }
+    
+    if (isActive && cometRef.current) {
+      const delta = state.clock.getDelta();
+      const newProgress = progress + (delta / duration.current);
+      
+      if (newProgress >= 1.1) {
+        setIsActive(false);
+        setProgress(0);
+      } else {
+        setProgress(newProgress);
+        
+        const t = Math.min(newProgress, 1);
+        const curve = t * t * (3 - 2 * t);
+        
+        cometRef.current.position.lerpVectors(startPoint.current, endPoint.current, curve);
+        
+        const direction = new THREE.Vector3().subVectors(endPoint.current, startPoint.current).normalize();
+        cometRef.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+        
+        let opacity = 1;
+        if (newProgress < 0.15) {
+          opacity = newProgress / 0.15;
+        } else if (newProgress > 1.0) {
+          opacity = Math.max(0, 1 - (newProgress - 1.0) * 10);
+        } else if (newProgress > 0.85) {
+          opacity = 1 - ((newProgress - 0.85) / 0.15) * 0.3;
+        }
+        
+        cometRef.current.children.forEach((child, index) => {
+          if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial) {
+            if (index === 0) {
+              child.material.opacity = opacity * 0.95;
+            } else {
+              child.material.opacity = opacity * (0.4 - index * 0.08);
+            }
+          }
+        });
+      }
+    }
+  });
+
+  if (!isActive) return null;
+
+  return (
+    <group ref={cometRef}>
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.04, 16, 16]} />
+        <meshBasicMaterial 
+          color="#f5f3ea" 
+          transparent 
+          opacity={0.95}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      
+      <mesh position={[0, 0, 0.02]}>
+        <sphereGeometry args={[0.06, 16, 16]} />
+        <meshBasicMaterial 
+          color="#fff8e7" 
+          transparent 
+          opacity={0.4}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      
+      {[0.15, 0.35, 0.6, 0.9, 1.25].map((z, i) => (
+        <mesh key={i} position={[0, 0, z]} scale={[1 - i * 0.15, 1 - i * 0.15, 1]}>
+          <sphereGeometry args={[0.025, 8, 8]} />
+          <meshBasicMaterial 
+            color={i < 2 ? "#f5f3ea" : "#e8e6d8"}
+            transparent 
+            opacity={0.4 - i * 0.08}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function CameraController({ target }: { target?: THREE.Vector3 }) {
   const { camera } = useThree();
   const targetPos = useRef(new THREE.Vector3(0, 0, 6));
@@ -260,10 +388,20 @@ export default function GlobeScene({
   simulationIntensity,
   entered,
 }: GlobeSceneProps) {
+  const [lastInteractionTime, setLastInteractionTime] = useState(Date.now());
+  
   const cameraTarget = useMemo(() => {
     if (!selectedCity) return undefined;
     return latLngToVector3(selectedCity.lat, selectedCity.lng, 2.03);
   }, [selectedCity]);
+
+  useEffect(() => {
+    setLastInteractionTime(Date.now());
+  }, [selectedCity]);
+
+  const handleInteraction = useCallback(() => {
+    setLastInteractionTime(Date.now());
+  }, []);
 
   return (
     <Canvas
@@ -275,10 +413,11 @@ export default function GlobeScene({
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.2
       }}
+      onPointerDown={handleInteraction}
+      onWheel={handleInteraction}
     >
       <color attach="background" args={["#060b18"]} />
       
-      {/* Minimal lighting - emissive dominance for night mode */}
       <ambientLight intensity={0.2} />
 
       <Stars radius={100} depth={50} count={3000} factor={3} fade speed={0.5} />
@@ -288,6 +427,11 @@ export default function GlobeScene({
         simulationIntensity={simulationIntensity}
         onCitySelect={onCitySelect}
         selectedCity={selectedCity}
+      />
+
+      <RareComet 
+        selectedCity={selectedCity}
+        lastInteractionTime={lastInteractionTime}
       />
 
       <CameraController target={cameraTarget} />

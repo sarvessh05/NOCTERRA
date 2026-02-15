@@ -6,7 +6,7 @@
 
 ## 🌐 Live Demo
 
-[View Live Project] _https://nocterra.vercel.app/_
+View Live Project _https://nocterra.vercel.app/_
 
 ## ✨ Features
 
