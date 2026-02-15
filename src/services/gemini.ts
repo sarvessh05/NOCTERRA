@@ -1,9 +1,14 @@
-// Use serverless function in production, direct API in development
+// Primary AI: Gemini (Google)
 const USE_PROXY = import.meta.env.PROD || import.meta.env.VITE_USE_PROXY === 'true';
 const PROXY_URL = '/.netlify/functions/gemini-proxy';
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-2.0-flash-001';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+// Fallback AI: Groq (Fast and generous free tier)
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+const GROQ_MODEL = 'llama-3.3-70b-versatile'; // Fast and capable
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // Feature flag - disable AI if quota exhausted
 const AI_ENABLED = import.meta.env.VITE_AI_ENABLED !== 'false'; // Default true
@@ -15,9 +20,9 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 // Request deduplication - prevents parallel requests for same data
 const pendingRequests = new Map<string, Promise<any>>();
 
-// Track API failures to auto-disable
-let consecutiveFailures = 0;
-const MAX_FAILURES = 3;
+// Track API failures to auto-switch providers
+let geminiFailures = 0;
+const MAX_GEMINI_FAILURES = 2; // Switch to Groq after 2 failures
 
 function getCachedResponse<T>(key: string): T | null {
   const cached = responseCache.get(key);
@@ -101,9 +106,9 @@ export async function getAllAirQualityData(
       // Generate forecast using rule-based algorithm (no AI needed - more reliable)
       const forecast = generateRuleBasedForecast(aqi, historicalData);
       
-      // Check if AI is enabled and not failing
-      if (!AI_ENABLED || consecutiveFailures >= MAX_FAILURES) {
-        console.log('⚠️ AI disabled or quota exhausted, using fallback data');
+      // Check if AI is enabled
+      if (!AI_ENABLED) {
+        console.log('⚠️ AI disabled, using fallback data');
         const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
         setCachedResponse(cacheKey, fallback);
         return fallback;
@@ -111,28 +116,58 @@ export async function getAllAirQualityData(
 
       // Try AI for insight and health impact
       try {
-        const aiResult = await makeAIRequest(cityName, aqi, trend);
+        let aiResult;
         
-        // Success - reset failure counter
-        consecutiveFailures = 0;
+        // Try Gemini first if not failing too much
+        if (geminiFailures < MAX_GEMINI_FAILURES && GEMINI_API_KEY) {
+          try {
+            console.log('🔵 Trying Gemini AI...');
+            aiResult = await makeGeminiRequest(cityName, aqi, trend);
+            geminiFailures = 0; // Reset on success
+            console.log('✅ Gemini AI succeeded');
+          } catch (geminiError) {
+            geminiFailures++;
+            console.warn(`⚠️ Gemini failed (${geminiFailures}/${MAX_GEMINI_FAILURES}):`, geminiError);
+            throw geminiError; // Let it fall through to Groq
+          }
+        } else {
+          throw new Error('Gemini unavailable, trying Groq');
+        }
         
-        // Combine AI results with rule-based forecast
+        // If we got here, Gemini succeeded
         const result: CombinedAirQualityData = {
           insight: aiResult.insight,
           healthImpact: aiResult.healthImpact,
           forecast
         };
         
-        // Cache the response
         setCachedResponse(cacheKey, result);
-        console.log(`✅ Cached AI data for: ${cityName}`);
-        
         return result;
-      } catch (aiError) {
-        // AI failed - increment counter and use fallback
-        consecutiveFailures++;
-        console.warn(`⚠️ AI request failed (${consecutiveFailures}/${MAX_FAILURES}):`, aiError);
         
+      } catch (primaryError) {
+        // Gemini failed, try Groq as fallback
+        if (GROQ_API_KEY) {
+          try {
+            console.log('🟢 Trying Groq AI as fallback...');
+            const groqResult = await makeGroqRequest(cityName, aqi, trend);
+            console.log('✅ Groq AI succeeded');
+            
+            const result: CombinedAirQualityData = {
+              insight: groqResult.insight,
+              healthImpact: groqResult.healthImpact,
+              forecast
+            };
+            
+            setCachedResponse(cacheKey, result);
+            return result;
+          } catch (groqError) {
+            console.warn('⚠️ Groq also failed:', groqError);
+            // Fall through to static fallback
+          }
+        }
+        
+        // Both AI providers failed, use static fallback
+        console.log('⚠️ All AI providers failed, using static fallback');
         const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
         setCachedResponse(cacheKey, fallback);
         return fallback;
@@ -148,12 +183,11 @@ export async function getAllAirQualityData(
   return requestPromise;
 }
 
-async function makeAIRequest(
+async function makeGeminiRequest(
   cityName: string,
   aqi: number,
   trend: 'up' | 'down' | 'stable'
 ): Promise<{ insight: AirQualityInsight; healthImpact: HealthImpactData }> {
-  // Only use AI for insight and health impact (much smaller response = 80% token reduction)
   const prompt = `You are an air quality expert analyzing ${cityName}. Provide analysis in ONE JSON response.
 
 Current Data:
@@ -190,73 +224,120 @@ Return ONLY this JSON structure:
 }
 
 Return ONLY valid JSON, no markdown.`;
-
-  console.log(`🔄 Making AI request for: ${cityName}`);
   
   let data;
   
   if (USE_PROXY) {
-    // Use serverless function (production)
     const response = await fetch(PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt,
-        config: {
-          temperature: 0.8,
-          maxOutputTokens: 800,
-        }
+        config: { temperature: 0.8, maxOutputTokens: 800 }
       })
     });
 
-    if (response.status === 429) {
-      throw new Error('Rate limit exceeded');
-    }
-
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      throw new Error(`Gemini API failed: ${response.status}`);
     }
-
     data = await response.json();
   } else {
-    // Direct API call (development only)
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 800,
-        }
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.8, maxOutputTokens: 800 }
       })
     });
 
-    if (response.status === 429) {
-      throw new Error('Rate limit exceeded');
-    }
-
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      throw new Error(`Gemini API failed: ${response.status}`);
     }
-
     data = await response.json();
   }
 
   const text = data.candidates[0].content.parts[0].text;
-  
   const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Invalid response format');
+  if (!jsonMatch) throw new Error('Invalid response format');
+  
+  return JSON.parse(jsonMatch[0]);
+}
+
+async function makeGroqRequest(
+  cityName: string,
+  aqi: number,
+  trend: 'up' | 'down' | 'stable'
+): Promise<{ insight: AirQualityInsight; healthImpact: HealthImpactData }> {
+  const prompt = `You are an air quality expert analyzing ${cityName}. Provide analysis in ONE JSON response.
+
+Current Data:
+- City: ${cityName}
+- Current AQI: ${aqi}
+- Trend: ${trend}
+
+Return ONLY this JSON structure (no markdown, no code blocks):
+
+{
+  "insight": {
+    "explanation": "Why does ${cityName} have an AQI of ${aqi}? (2-3 sentences, city-specific)",
+    "healthAdvice": "Practical recommendations for ${cityName} residents today",
+    "trend": "What to expect in next 24-48 hours for ${cityName}",
+    "confidence": 85
+  },
+  "healthImpact": {
+    "respiratoryRisk": {
+      "level": "Low/Moderate/High/Very High",
+      "description": "Respiratory health risks in ${cityName}",
+      "color": "${getColorForAqi(aqi)}"
+    },
+    "visibility": {
+      "value": "X km or Good/Fair/Poor",
+      "description": "Visibility in ${cityName}",
+      "color": "${getColorForAqi(aqi)}"
+    },
+    "outdoorActivity": {
+      "level": "Unrestricted/Limited/Avoid",
+      "description": "Activity recommendations for ${cityName}",
+      "color": "${getColorForAqi(aqi)}"
+    }
   }
+}`;
+
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an air quality expert. Always respond with valid JSON only, no markdown formatting.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.8,
+      max_tokens: 800
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Groq API failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices[0].message.content;
+  
+  // Remove markdown code blocks if present
+  const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Invalid response format');
   
   return JSON.parse(jsonMatch[0]);
 }
