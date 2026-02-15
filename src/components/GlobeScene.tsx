@@ -33,10 +33,9 @@ function EarthWithMarkers({
 
   useFrame((state, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.05; // Smooth visible rotation
+      groupRef.current.rotation.y += delta * 0.02;
     }
     
-    // Subtle emissive pulsing - barely noticeable, feels alive
     if (earthRef.current) {
       const material = earthRef.current.material as THREE.MeshStandardMaterial;
       material.emissiveIntensity = 1.8 + Math.sin(state.clock.elapsedTime * 0.5) * 0.1;

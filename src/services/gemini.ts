@@ -225,7 +225,7 @@ IMPORTANT:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt,
-        config: { temperature: 0.8, maxOutputTokens: 800 }
+        config: { temperature: 0.4, maxOutputTokens: 800 }
       })
     });
 
