@@ -9,6 +9,9 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 const responseCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
+// Request deduplication - prevents parallel requests for same data
+const pendingRequests = new Map<string, Promise<any>>();
+
 function getCachedResponse<T>(key: string): T | null {
   const cached = responseCache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
@@ -48,36 +51,58 @@ export interface HealthImpactData {
   };
 }
 
-// Combined response interface
+// Combined response interface - AI only generates insight and health, forecast is rule-based
 export interface CombinedAirQualityData {
   insight: AirQualityInsight;
   forecast: { hour: number; aqi: number; confidence: number }[];
   healthImpact: HealthImpactData;
 }
 
-// Single unified API call for all data
+function getColorForAqi(aqi: number): string {
+  if (aqi <= 50) return "hsl(142, 76%, 50%)";
+  if (aqi <= 100) return "hsl(45, 100%, 55%)";
+  if (aqi <= 150) return "hsl(25, 100%, 55%)";
+  if (aqi <= 200) return "hsl(0, 84%, 55%)";
+  if (aqi <= 300) return "hsl(280, 80%, 55%)";
+  return "hsl(320, 90%, 40%)";
+}
+
+// Single unified API call - with request deduplication
 export async function getAllAirQualityData(
   cityName: string,
   aqi: number,
   trend: 'up' | 'down' | 'stable',
   historicalData: number[]
 ): Promise<CombinedAirQualityData> {
-  // Check cache first
   const cacheKey = `combined-${cityName}-${aqi}`;
+  
+  // 1️⃣ Check cache first
   const cached = getCachedResponse<CombinedAirQualityData>(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const prompt = `You are an air quality expert analyzing ${cityName}. Provide a comprehensive analysis in ONE JSON response.
+  // 2️⃣ Check if request already in flight (deduplication)
+  if (pendingRequests.has(cacheKey)) {
+    console.log(`⏳ Waiting for existing request for ${cityName}...`);
+    return pendingRequests.get(cacheKey)!;
+  }
+
+  // 3️⃣ Create new request promise
+  const requestPromise = (async () => {
+    try {
+      // Generate forecast using rule-based algorithm (no AI needed - more reliable)
+      const forecast = generateRuleBasedForecast(aqi, historicalData);
+      
+      // Only use AI for insight and health impact (much smaller response = 80% token reduction)
+      const prompt = `You are an air quality expert analyzing ${cityName}. Provide analysis in ONE JSON response.
 
 Current Data:
 - City: ${cityName}
 - Current AQI: ${aqi}
 - Trend: ${trend}
-- Recent 7-day data: ${historicalData.join(', ')}
 
-Return a SINGLE JSON object with ALL three sections:
+Return ONLY this JSON structure:
 
 {
   "insight": {
@@ -86,128 +111,126 @@ Return a SINGLE JSON object with ALL three sections:
     "trend": "What to expect in next 24-48 hours for ${cityName}",
     "confidence": 85
   },
-  "forecast": [
-    {"hour": 1, "aqi": 145, "confidence": 90},
-    ... (72 hourly entries with realistic patterns)
-  ],
   "healthImpact": {
     "respiratoryRisk": {
       "level": "Low/Moderate/High/Very High",
       "description": "Respiratory health risks in ${cityName}",
-      "color": "hsl(142, 76%, 50%)"
+      "color": "${getColorForAqi(aqi)}"
     },
     "visibility": {
       "value": "X km or Good/Fair/Poor",
       "description": "Visibility in ${cityName}",
-      "color": "hsl(142, 76%, 50%)"
+      "color": "${getColorForAqi(aqi)}"
     },
     "outdoorActivity": {
       "level": "Unrestricted/Limited/Avoid",
       "description": "Activity recommendations for ${cityName}",
-      "color": "hsl(142, 76%, 50%)"
+      "color": "${getColorForAqi(aqi)}"
     }
   }
 }
 
-Color guidelines:
-- Good (0-50): "hsl(142, 76%, 50%)"
-- Moderate (51-100): "hsl(45, 100%, 55%)"
-- Unhealthy Sensitive (101-150): "hsl(25, 100%, 55%)"
-- Unhealthy (151-200): "hsl(0, 84%, 55%)"
-- Very Unhealthy (201-300): "hsl(280, 80%, 55%)"
-- Hazardous (301+): "hsl(320, 90%, 40%)"
-
 Return ONLY valid JSON, no markdown.`;
 
-  try {
-    console.log(`🔄 Making API call for: ${cityName}`);
-    
-    let data;
-    
-    if (USE_PROXY) {
-      // Use serverless function (production)
-      console.log('Using serverless proxy');
-      const response = await fetch(PROXY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-          config: {
-            temperature: 0.8,
-            maxOutputTokens: 3000,
-          }
-        })
-      });
+      console.log(`🔄 Making API call for: ${cityName}`);
+      
+      let data;
+      
+      if (USE_PROXY) {
+        // Use serverless function (production)
+        console.log('Using serverless proxy');
+        const response = await fetch(PROXY_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt,
+            config: {
+              temperature: 0.8,
+              maxOutputTokens: 800, // Reduced from 3000 - much smaller response
+            }
+          })
+        });
 
-      if (response.status === 429) {
-        console.warn('⚠️ Rate limit hit, using fallback data');
-        throw new Error('Rate limit exceeded');
+        if (response.status === 429) {
+          console.warn('⚠️ Rate limit hit, using fallback data');
+          throw new Error('Rate limit exceeded');
+        }
+
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+
+        data = await response.json();
+      } else {
+        // Direct API call (development only)
+        console.log('Using direct API call (development)');
+        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: prompt
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.8,
+              maxOutputTokens: 800, // Reduced from 3000
+            }
+          })
+        });
+
+        if (response.status === 429) {
+          console.warn('⚠️ Rate limit hit, using fallback data');
+          throw new Error('Rate limit exceeded');
+        }
+
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+
+        data = await response.json();
       }
 
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+      const text = data.candidates[0].content.parts[0].text;
+      
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Invalid response format');
       }
-
-      data = await response.json();
-    } else {
-      // Direct API call (development only)
-      console.log('Using direct API call (development)');
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.8,
-            maxOutputTokens: 3000,
-          }
-        })
-      });
-
-      if (response.status === 429) {
-        console.warn('⚠️ Rate limit hit, using fallback data');
-        throw new Error('Rate limit exceeded');
-      }
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-
-      data = await response.json();
+      
+      const aiResult = JSON.parse(jsonMatch[0]);
+      
+      // Combine AI results with rule-based forecast
+      const result: CombinedAirQualityData = {
+        insight: aiResult.insight,
+        healthImpact: aiResult.healthImpact,
+        forecast // Rule-based, not from AI
+      };
+      
+      // Cache the response
+      setCachedResponse(cacheKey, result);
+      console.log(`✅ Cached data for: ${cityName}`);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ API error, using fallback:', error);
+      const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
+      setCachedResponse(cacheKey, fallback);
+      return fallback;
+    } finally {
+      // Always clean up pending request
+      pendingRequests.delete(cacheKey);
     }
-    const text = data.candidates[0].content.parts[0].text;
-    
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid response format');
-    }
-    
-    const result = JSON.parse(jsonMatch[0]);
-    
-    // Ensure forecast has exactly 72 entries
-    if (!result.forecast || result.forecast.length < 72) {
-      result.forecast = generateRuleBasedForecast(aqi, historicalData);
-    }
-    
-    // Cache the response
-    setCachedResponse(cacheKey, result);
-    console.log(`✅ Cached data for: ${cityName}`);
-    
-    return result;
-  } catch (error) {
-    console.error('❌ API error, using fallback:', error);
-    const fallback = generateFallbackData(cityName, aqi, trend, historicalData);
-    setCachedResponse(cacheKey, fallback);
-    return fallback;
-  }
+  })();
+
+  // Store the promise for deduplication
+  pendingRequests.set(cacheKey, requestPromise);
+  return requestPromise;
 }
 
 function generateFallbackData(
@@ -279,15 +302,6 @@ function generateRuleBasedForecast(
 }
 
 function generateFallbackHealthData(cityName: string, aqi: number): HealthImpactData {
-  const getColorForAqi = (aqi: number) => {
-    if (aqi <= 50) return "hsl(142, 76%, 50%)";
-    if (aqi <= 100) return "hsl(45, 100%, 55%)";
-    if (aqi <= 150) return "hsl(25, 100%, 55%)";
-    if (aqi <= 200) return "hsl(0, 84%, 55%)";
-    if (aqi <= 300) return "hsl(280, 80%, 55%)";
-    return "hsl(320, 90%, 40%)";
-  };
-
   return {
     respiratoryRisk: {
       level: aqi > 150 ? "High" : aqi > 100 ? "Moderate" : "Low",

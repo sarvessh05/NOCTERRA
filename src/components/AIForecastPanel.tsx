@@ -11,37 +11,30 @@ interface AIForecastPanelProps {
 
 export default function AIForecastPanel({ city }: AIForecastPanelProps) {
   const [forecast, setForecast] = useState<{ hour: number; aqi: number; confidence: number }[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [avgConfidence, setAvgConfidence] = useState(0);
-  const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Don't auto-load, wait for user interaction
+  // Auto-load when city changes
   useEffect(() => {
-    // Reset when city changes
-    setHasLoaded(false);
-    setForecast([]);
-  }, [city.name]);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const result = await get72HourForecast(city.name, city.aqi, city.forecast);
+        setForecast(result);
+        
+        // Calculate average confidence
+        const avg = result.reduce((sum, item) => sum + item.confidence, 0) / result.length;
+        setAvgConfidence(Math.round(avg));
+      } catch (error) {
+        console.error("Failed to get forecast:", error);
+        setForecast([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const loadForecast = async () => {
-    if (hasLoaded) return; // Prevent duplicate loads
-    
-    setLoading(true);
-    setHasLoaded(true);
-    try {
-      const result = await get72HourForecast(city.name, city.aqi, city.forecast);
-      setForecast(result);
-      
-      // Calculate average confidence
-      const avg = result.reduce((sum, item) => sum + item.confidence, 0) / result.length;
-      setAvgConfidence(Math.round(avg));
-    } catch (error) {
-      console.error("Failed to get forecast:", error);
-      // Set empty forecast on error so UI doesn't hang
-      setForecast([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchData();
+  }, [city.name, city.aqi]);
 
   // Prepare chart data (show every 6 hours for readability)
   const chartData = forecast
@@ -185,13 +178,7 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
         </>
       ) : (
         <div className="text-center py-8">
-          <button
-            onClick={loadForecast}
-            className="px-6 py-3 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary font-semibold transition-colors"
-          >
-            Generate 72-Hour Forecast
-          </button>
-          <p className="text-xs text-muted-foreground mt-2">Click to get AI-powered predictions</p>
+          <p className="text-sm text-muted-foreground">No forecast data available</p>
         </div>
       )}
     </div>

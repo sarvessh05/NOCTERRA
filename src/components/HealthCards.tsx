@@ -14,8 +14,7 @@ export default function HealthCards({ city }: HealthCardsProps) {
 
   useEffect(() => {
     if (city) {
-      // Reset health data when city changes
-      setHealthData(null);
+      loadHealthImpact();
     }
   }, [city?.name, city?.aqi]);
 
@@ -28,7 +27,6 @@ export default function HealthCards({ city }: HealthCardsProps) {
       setHealthData(data);
     } catch (error) {
       console.error("Failed to get health impact:", error);
-      // Set null on error so UI doesn't hang
       setHealthData(null);
     } finally {
       setLoading(false);
@@ -104,14 +102,6 @@ export default function HealthCards({ city }: HealthCardsProps) {
           className="text-center text-xs md:text-sm text-muted-foreground mb-6 md:mb-8"
         >
           AI-powered health analysis for current air quality
-          {!loading && !healthData && (
-            <button
-              onClick={loadHealthImpact}
-              className="block mx-auto mt-2 px-4 py-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary text-sm font-medium transition-colors"
-            >
-              Load Health Analysis
-            </button>
-          )}
         </motion.p>
       )}
 
