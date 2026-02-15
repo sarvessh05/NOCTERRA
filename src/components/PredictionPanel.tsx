@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { CityData, getAqiColor, getAqiLabel } from "@/data/cities";
 import { TrendingUp, TrendingDown, Minus, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { getAllAirQualityData } from "@/services/gemini";
 import {
   LineChart,
   Line,
@@ -27,10 +29,29 @@ export default function PredictionPanel({
   onToggleFuture,
   onClose,
 }: PredictionPanelProps) {
+  const [futureProjection, setFutureProjection] = useState({ percentIncrease: 12, reason: 'rising temperature and wind stagnation' });
+
+  useEffect(() => {
+    // Fetch AI projection data
+    const fetchProjection = async () => {
+      try {
+        const data = await getAllAirQualityData(city.name, city.aqi, city.trend, city.forecast);
+        if (data.insight.futureProjection) {
+          setFutureProjection(data.insight.futureProjection);
+        }
+      } catch (error) {
+        console.error('Failed to get future projection:', error);
+      }
+    };
+    fetchProjection();
+  }, [city.name, city.aqi]);
+
+  const projectionMultiplier = 1 + (futureProjection.percentIncrease / 100);
+  
   const chartData = city.forecast.map((val, i) => ({
     day: dayLabels[i],
     aqi: val,
-    projected: futureMode ? Math.round(val * 1.12) : val,
+    projected: futureMode ? Math.round(val * projectionMultiplier) : val,
   }));
 
   const trendIcon =
@@ -196,7 +217,7 @@ export default function PredictionPanel({
           className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 mb-2"
         >
           <p className="text-xs text-destructive">
-            Projected Rise: 12% due to rising temperature and wind stagnation.
+            Projected Rise: {futureProjection.percentIncrease}% due to {futureProjection.reason}.
           </p>
         </motion.div>
       )}

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Area, AreaChart } from "recharts";
 import { TrendingUp, Loader2, Zap } from "lucide-react";
 import { CityData, getAqiColor } from "@/data/cities";
-import { get72HourForecast } from "@/services/gemini";
+import { get72HourForecast, getAllAirQualityData } from "@/services/gemini";
 
 interface AIForecastPanelProps {
   city: CityData;
@@ -13,6 +13,7 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
   const [forecast, setForecast] = useState<{ hour: number; aqi: number; confidence: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [avgConfidence, setAvgConfidence] = useState(0);
+  const [aiConfidence, setAiConfidence] = useState(83); // Will be updated from AI
 
   // Auto-load when city changes
   useEffect(() => {
@@ -25,6 +26,10 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
         // Calculate average confidence
         const avg = result.reduce((sum, item) => sum + item.confidence, 0) / result.length;
         setAvgConfidence(Math.round(avg));
+        
+        // Get AI confidence from the combined data
+        const combinedData = await getAllAirQualityData(city.name, city.aqi, city.trend, city.forecast);
+        setAiConfidence(combinedData.insight.forecastConfidence || 83);
       } catch (error) {
         console.error("Failed to get forecast:", error);
         setForecast([]);
@@ -72,7 +77,7 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
           >
             <div className="flex items-center gap-1 md:gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[10px] md:text-xs font-semibold text-primary">AI: {avgConfidence}%</span>
+              <span className="text-[10px] md:text-xs font-semibold text-primary">AI: {aiConfidence}%</span>
             </div>
           </motion.div>
         )}

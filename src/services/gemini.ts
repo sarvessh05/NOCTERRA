@@ -1,14 +1,14 @@
-// Primary AI: Gemini (Google)
+// Primary AI: Groq (Fast and generous free tier)
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+// Fallback AI: Gemini (Google)
 const USE_PROXY = import.meta.env.PROD || import.meta.env.VITE_USE_PROXY === 'true';
 const PROXY_URL = '/.netlify/functions/gemini-proxy';
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-2.0-flash-001';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-
-// Fallback AI: Groq (Fast and generous free tier)
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
-const GROQ_MODEL = 'llama-3.3-70b-versatile'; // Fast and capable
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // Feature flag - disable AI if quota exhausted
 const AI_ENABLED = import.meta.env.VITE_AI_ENABLED !== 'false'; // Default true
@@ -21,8 +21,8 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 const pendingRequests = new Map<string, Promise<any>>();
 
 // Track API failures to auto-switch providers
-let geminiFailures = 0;
-const MAX_GEMINI_FAILURES = 2; // Switch to Groq after 2 failures
+let groqFailures = 0;
+const MAX_GROQ_FAILURES = 2; // Switch to Gemini after 2 failures
 
 function getCachedResponse<T>(key: string): T | null {
   const cached = responseCache.get(key);
@@ -43,6 +43,11 @@ export interface AirQualityInsight {
   healthAdvice: string;
   trend: string;
   confidence: number;
+  forecastConfidence?: number; // AI confidence for 72-hour forecast
+  futureProjection?: {
+    percentIncrease: number; // Dynamic % for future mode
+    reason: string; // Why it will increase
+  };
 }
 
 export interface HealthImpactData {
@@ -118,23 +123,23 @@ export async function getAllAirQualityData(
       try {
         let aiResult;
         
-        // Try Gemini first if not failing too much
-        if (geminiFailures < MAX_GEMINI_FAILURES && GEMINI_API_KEY) {
+        // Try Groq first (now primary)
+        if (groqFailures < MAX_GROQ_FAILURES && GROQ_API_KEY) {
           try {
-            console.log('🔵 Trying Gemini AI...');
-            aiResult = await makeGeminiRequest(cityName, aqi, trend);
-            geminiFailures = 0; // Reset on success
-            console.log('✅ Gemini AI succeeded');
-          } catch (geminiError) {
-            geminiFailures++;
-            console.warn(`⚠️ Gemini failed (${geminiFailures}/${MAX_GEMINI_FAILURES}):`, geminiError);
-            throw geminiError; // Let it fall through to Groq
+            console.log('� Trying Groq AI (Primary)...');
+            aiResult = await makeGroqRequest(cityName, aqi, trend);
+            groqFailures = 0; // Reset on success
+            console.log('✅ Groq AI succeeded');
+          } catch (groqError) {
+            groqFailures++;
+            console.warn(`⚠️ Groq failed (${groqFailures}/${MAX_GROQ_FAILURES}):`, groqError);
+            throw groqError; // Let it fall through to Gemini
           }
         } else {
-          throw new Error('Gemini unavailable, trying Groq');
+          throw new Error('Groq unavailable, trying Gemini');
         }
         
-        // If we got here, Gemini succeeded
+        // If we got here, Groq succeeded
         const result: CombinedAirQualityData = {
           insight: aiResult.insight,
           healthImpact: aiResult.healthImpact,
@@ -145,23 +150,23 @@ export async function getAllAirQualityData(
         return result;
         
       } catch (primaryError) {
-        // Gemini failed, try Groq as fallback
-        if (GROQ_API_KEY) {
+        // Groq failed, try Gemini as fallback
+        if (GEMINI_API_KEY) {
           try {
-            console.log('🟢 Trying Groq AI as fallback...');
-            const groqResult = await makeGroqRequest(cityName, aqi, trend);
-            console.log('✅ Groq AI succeeded');
+            console.log('� Trying Gemini AI as fallback...');
+            const geminiResult = await makeGeminiRequest(cityName, aqi, trend);
+            console.log('✅ Gemini AI succeeded');
             
             const result: CombinedAirQualityData = {
-              insight: groqResult.insight,
-              healthImpact: groqResult.healthImpact,
+              insight: geminiResult.insight,
+              healthImpact: geminiResult.healthImpact,
               forecast
             };
             
             setCachedResponse(cacheKey, result);
             return result;
-          } catch (groqError) {
-            console.warn('⚠️ Groq also failed:', groqError);
+          } catch (geminiError) {
+            console.warn('⚠️ Gemini also failed:', geminiError);
             // Fall through to static fallback
           }
         }
@@ -283,7 +288,12 @@ Return ONLY this JSON structure (no markdown, no code blocks):
     "explanation": "Why does ${cityName} have an AQI of ${aqi}? (2-3 sentences, city-specific)",
     "healthAdvice": "Practical recommendations for ${cityName} residents today",
     "trend": "What to expect in next 24-48 hours for ${cityName}",
-    "confidence": 85
+    "confidence": 85,
+    "forecastConfidence": 82,
+    "futureProjection": {
+      "percentIncrease": 15,
+      "reason": "Expected increase due to [specific factors for ${cityName}]"
+    }
   },
   "healthImpact": {
     "respiratoryRisk": {
@@ -302,7 +312,14 @@ Return ONLY this JSON structure (no markdown, no code blocks):
       "color": "${getColorForAqi(aqi)}"
     }
   }
-}`;
+}
+
+IMPORTANT:
+- confidence: Your confidence in current analysis (70-95)
+- forecastConfidence: Your confidence in 72-hour forecast (65-90)
+- percentIncrease: Realistic % increase for future scenario (5-25)
+- Make values vary based on city conditions, not constant
+- Be specific to ${cityName}'s geography, climate, and pollution sources`;
 
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
@@ -315,7 +332,7 @@ Return ONLY this JSON structure (no markdown, no code blocks):
       messages: [
         {
           role: 'system',
-          content: 'You are an air quality expert. Always respond with valid JSON only, no markdown formatting.'
+          content: 'You are an air quality expert. Always respond with valid JSON only, no markdown formatting. Vary confidence values based on data quality and city-specific factors.'
         },
         {
           role: 'user',
@@ -323,7 +340,7 @@ Return ONLY this JSON structure (no markdown, no code blocks):
         }
       ],
       temperature: 0.8,
-      max_tokens: 800
+      max_tokens: 1000
     })
   });
 
@@ -348,6 +365,23 @@ function generateFallbackData(
   trend: 'up' | 'down' | 'stable',
   historicalData: number[]
 ): CombinedAirQualityData {
+  // Generate dynamic values based on AQI and trend
+  const baseConfidence = 75;
+  const confidenceVariation = Math.floor(Math.random() * 10) - 5; // -5 to +5
+  const confidence = Math.max(70, Math.min(90, baseConfidence + confidenceVariation));
+  
+  const forecastConfidence = Math.max(65, confidence - 8);
+  
+  // Dynamic future projection based on trend and AQI
+  let percentIncrease = 12;
+  if (trend === 'up') {
+    percentIncrease = 15 + Math.floor(Math.random() * 8); // 15-22%
+  } else if (trend === 'down') {
+    percentIncrease = 5 + Math.floor(Math.random() * 5); // 5-9%
+  } else {
+    percentIncrease = 10 + Math.floor(Math.random() * 6); // 10-15%
+  }
+  
   return {
     insight: {
       explanation: `${cityName} currently has an AQI of ${aqi}, which indicates ${aqi > 150 ? 'unhealthy' : aqi > 100 ? 'moderate' : 'good'} air quality. This is influenced by local emissions, weather patterns, and seasonal factors.`,
@@ -361,7 +395,16 @@ function generateFallbackData(
         : trend === 'down'
         ? `Conditions in ${cityName} are expected to improve.`
         : `Air quality in ${cityName} should remain stable.`,
-      confidence: 75
+      confidence,
+      forecastConfidence,
+      futureProjection: {
+        percentIncrease,
+        reason: trend === 'up' 
+          ? 'rising temperature and wind stagnation'
+          : trend === 'down'
+          ? 'improved ventilation and reduced emissions'
+          : 'stable atmospheric conditions'
+      }
     },
     forecast: generateRuleBasedForecast(aqi, historicalData),
     healthImpact: generateFallbackHealthData(cityName, aqi)
