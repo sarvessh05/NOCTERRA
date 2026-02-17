@@ -40,7 +40,7 @@ export default function PredictionPanel({
           setFutureProjection(data.insight.futureProjection);
         }
       } catch (error) {
-        console.error('Failed to get future projection:', error);
+        // Failed to get future projection
       }
     };
     fetchProjection();

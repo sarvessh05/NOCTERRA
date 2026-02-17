@@ -26,7 +26,6 @@ export default function HealthCards({ city }: HealthCardsProps) {
       const data = await getHealthImpact(city.name, city.aqi);
       setHealthData(data);
     } catch (error) {
-      console.error("Failed to get health impact:", error);
       setHealthData(null);
     } finally {
       setLoading(false);

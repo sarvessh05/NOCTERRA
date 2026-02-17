@@ -31,7 +31,6 @@ export default function AIForecastPanel({ city }: AIForecastPanelProps) {
         const combinedData = await getAllAirQualityData(city.name, city.aqi, city.trend, city.forecast);
         setAiConfidence(combinedData.insight.forecastConfidence || 83);
       } catch (error) {
-        console.error("Failed to get forecast:", error);
         setForecast([]);
       } finally {
         setLoading(false);

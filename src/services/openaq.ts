@@ -75,7 +75,6 @@ export async function getCityAirQuality(cityName: string): Promise<{
 
     return null;
   } catch (error) {
-    console.error('OpenAQ API error:', error);
     return null;
   }
 }

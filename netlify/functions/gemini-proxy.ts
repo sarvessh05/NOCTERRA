@@ -80,7 +80,6 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify(data),
     };
   } catch (error) {
-    console.error('Gemini proxy error:', error);
     return {
       statusCode: 500,
       headers,

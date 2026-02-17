@@ -34,7 +34,7 @@ function EarthWithMarkers({
     if (groupRef.current) {
       groupRef.current.rotation.y += delta * 0.02;
     }
-    
+
     if (earthRef.current) {
       const material = earthRef.current.material as THREE.MeshStandardMaterial;
       material.emissiveIntensity = 1.8 + Math.sin(state.clock.elapsedTime * 0.5) * 0.1;

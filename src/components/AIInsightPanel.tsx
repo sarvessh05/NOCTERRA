@@ -19,7 +19,7 @@ export default function AIInsightPanel({ city, onClose }: AIInsightPanelProps) {
       const result = await getAirQualityInsight(city.name, city.aqi, city.trend);
       setInsight(result);
     } catch (error) {
-      console.error("Failed to get insight:", error);
+      // Failed to get insight
     } finally {
       setLoading(false);
     }
